@@ -225,8 +225,59 @@ fn load_stdin() -> io::Result<String> {
     return Ok(buffer);
 }
 
-fn conversation_to_terminal(json: Value) {
+fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
     log::trace!("In conversation_to_terminal");
+
+
+
+    let mut last_char = None;
+    let mut last_time = Instant::now();
+
+    loop {
+        if poll(Duration::from_millis(1_000))? {
+            let event = read()?;
+
+            if event == Event::Key(KeyCode::Char('q').into()) {
+                break;
+            }
+
+            if event == Event::Key(KeyCode::Char('j').into()) {
+                clear_screen(stdout);
+
+                last_char = Some('j');
+                last_time = Instant::now();
+            }
+
+            if event == Event::Key(KeyCode::Char('k').into()) {
+                clear_screen(stdout);
+
+                last_char = Some('k');
+                last_time = Instant::now();
+            }
+
+            if event == Event::Key(KeyCode::Char('g').into()) {
+
+                if last_char == Some('g') && last_time.elapsed() < Duration::from_millis(500) {
+                    clear_screen(stdout);
+                }
+
+                last_char = Some('g');
+                last_time = Instant::now();
+            }
+
+            if event == Event::Key(KeyCode::Char('G').into()) {
+                clear_screen(stdout);
+
+                last_char = Some('G');
+                last_time = Instant::now();
+            }
+        }
+    }
+
+
+
+    Ok(())
+
 }
 
 fn main() -> io::Result<()> {
@@ -281,7 +332,7 @@ fn main() -> io::Result<()> {
         log::debug!("data_type: {}", data_type);
 
         match data_type {
-            "conversation" => conversation_to_terminal(json),
+            "conversation" => conversation_to_terminal(&mut stdout, json)?,
             _ => log::error!("Unexpected data type: {}", data_type),
         }
     } else {
@@ -289,6 +340,7 @@ fn main() -> io::Result<()> {
     }
 
 
+    cleanup(stdout);
 
 
 
