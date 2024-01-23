@@ -91,13 +91,66 @@ fn cleanup(mut stdout: io::Stdout) {
     stdout.execute(terminal::LeaveAlternateScreen);
 }
 
-fn chunk_string(s: &str, chunk_size: usize) -> Vec<String> {
+fn simple_chunk(s: &str, chunk_size: usize) -> Vec<String> {
     s.chars()
         .collect::<Vec<char>>()
         .chunks(chunk_size)
         .map(|chunk| chunk.iter().collect())
         .collect()
 }
+
+fn chunk_string(s: &str, chunk_size: usize) -> Vec<String> {
+     assert!(chunk_size > 0, "chunk_size must be greater than zero");
+
+     let mut chunks = Vec::new();
+     let mut char_indices = s.char_indices().peekable();
+
+     while let Some((start_index, _)) = char_indices.peek().cloned() {
+         let mut end_index = start_index;
+         let mut chunk = String::new();
+         let mut last_is_whitespace = false;
+
+         while chunk.chars().count() < chunk_size {
+             match char_indices.next() {
+                 Some((idx, ch)) => {
+                     if !ch.is_whitespace() {
+                         last_is_whitespace = false;
+                     }
+                     end_index = idx;
+                     chunk.push(ch);
+                     if ch.is_whitespace() {
+                         last_is_whitespace = true;
+                     }
+                 },
+                 None => break,
+             }
+         }
+
+         // If the last character is not whitespace and the next character exists
+         // and it is not whitespace, we end this chunk early.
+         if !last_is_whitespace && char_indices.peek().map_or(false, |&(_, ch_next)|
+ !ch_next.is_whitespace()) {
+             // We need to find the start of the next word and trim the current chunk up to that point.
+             while let Some((idx, ch)) = char_indices.next() {
+                 // Once we find a whitespace or end of string, we stop and set the end_index before the start of next word
+                 if ch.is_whitespace() {
+                     end_index = idx;
+                     break;
+                 }
+             }
+         }
+
+         // Taking a slice to avoid breaking a character between chunks
+         chunks.push(s[start_index..end_index].to_string());
+
+         // continue processing from the next character, keeping last_is_whitespace accurate
+         if let Some((_, ch)) = char_indices.peek() {
+             last_is_whitespace = ch.is_whitespace();
+         }
+     }
+
+     chunks
+ }
 
 fn get_line_from_string(text: String, line_length: usize) -> String {
     let diff = line_length - (text.chars().count());
@@ -225,8 +278,100 @@ fn load_stdin() -> io::Result<String> {
     return Ok(buffer);
 }
 
+fn escape_for_terminal(s: &str) -> String {
+     s.replace('\x1b', "\\x1b")  // Escape ANSI escape code start
+      .replace('\n', "\\n")      // Escape newline
+      .replace('\r', "\\r")      // Escape carriage return
+      .replace('\t', "\\t")      // Escape tab
+      // Add more replacements as needed
+ }
+
 fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
     log::trace!("In conversation_to_terminal");
+
+
+
+
+
+
+    let Some(posts) = json.as_array() else {
+        log::debug!("json is not an array");
+        return Ok(());
+    };
+
+
+    //let first_parent = posts.iter().find(|&post| &post["parent_id"] == "").unwrap();
+    let first_parent = &posts[4];
+    log::debug!("{:?}", first_parent);
+
+    let content = serde_json::to_string(&first_parent["content"]).unwrap();
+
+
+    let size = terminal::size()?;
+
+
+    let mut x = 1;
+    let mut y = 2;
+
+    let mut index = 0;
+
+    while y < size.1 - 1 {
+
+        let post = &posts[index];
+
+        let content = serde_json::to_string(&post["content"]).unwrap();
+
+        let chunks = chunk_string(&content, 100);
+
+        for chunk in chunks {
+
+            let escaped_chunk = escape_for_terminal(&chunk);
+            log::debug!("chunk: {}", escaped_chunk);
+
+            log::debug!("x: {}, y: {}", x, y);
+
+            stdout
+                .queue(cursor::MoveTo(x, y))?
+                .queue(style::PrintStyledContent(
+                    escaped_chunk.clone()
+                    .with(Color::Black)
+                    .on(Color::Yellow)
+                ))?;
+
+            y += 1;
+        }
+
+        stdout
+            .queue(cursor::MoveTo(x, y))?
+            .queue(style::PrintStyledContent(
+                ""
+                .with(Color::Black)
+                .on(Color::Yellow)
+            ))?;
+
+        y += 1;
+
+        index += 1;
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
