@@ -286,11 +286,48 @@ fn escape_for_terminal(s: &str) -> String {
       // Add more replacements as needed
  }
 
+fn get_page(json: &Value, dimension_y: u16, dimension_x: u16) -> Vec<String> {
+    log::trace!("In get_page");
+
+    let padding_x = 1;
+    let padding_y = 1;
+
+    let mut page: Vec<String> = Vec::new();
+    let mut line_count: usize = 0;
+
+    let mut current_post_index = 0;
+
+    let Some(posts) = json.as_array() else {
+        log::debug!("json is not an array");
+        return Vec::new();
+    };
+
+    let max_lines = (dimension_y - 2 * padding_y) as usize;
+    log::debug!("max_lines: {}", max_lines);
+
+    while line_count < max_lines {
+        let current_post = &posts[current_post_index];
+
+        let content = serde_json::to_string(&current_post["content"]).unwrap();
+
+        let mut lines = chunk_string(&content, dimension_x as usize - 2 * padding_x);
+        lines.push("".to_owned());
+
+        line_count = line_count + lines.len();
+        current_post_index += 1;
+
+        page.append(&mut lines);
+    }
+
+    return page;
+}
+
 fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
     log::trace!("In conversation_to_terminal");
 
 
 
+    let size = terminal::size()?;
 
 
 
@@ -300,6 +337,17 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     };
 
 
+
+
+
+    let page = get_page(&json, size.1, size.0);
+    log::debug!("{:?}", page);
+
+
+
+
+
+
     //let first_parent = posts.iter().find(|&post| &post["parent_id"] == "").unwrap();
     let first_parent = &posts[4];
     log::debug!("{:?}", first_parent);
@@ -307,7 +355,6 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     let content = serde_json::to_string(&first_parent["content"]).unwrap();
 
 
-    let size = terminal::size()?;
 
 
     let mut x = 1;
@@ -321,14 +368,12 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
         let content = serde_json::to_string(&post["content"]).unwrap();
 
-        let chunks = chunk_string(&content, 100);
+        let chunks = chunk_string(&content, 150);
 
         for chunk in chunks {
 
             let escaped_chunk = escape_for_terminal(&chunk);
-            log::debug!("chunk: {}", escaped_chunk);
 
-            log::debug!("x: {}, y: {}", x, y);
 
             stdout
                 .queue(cursor::MoveTo(x, y))?
