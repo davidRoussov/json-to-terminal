@@ -77,7 +77,7 @@ fn setup() -> Result<io::Stdout> {
         for x in 0..size.0 {
             stdout
                 .queue(cursor::MoveTo(x,y))?
-                .queue(style::PrintStyledContent( "█".white()))?;
+                .queue(style::PrintStyledContent("█".white()))?;
         }
     }
     stdout.flush()?;
@@ -286,11 +286,10 @@ fn escape_for_terminal(s: &str) -> String {
       // Add more replacements as needed
  }
 
-fn get_page(json: &Value, dimension_y: u16, dimension_x: u16) -> Vec<String> {
+fn get_page(json: &Value, terminal_y: u16, terminal_x: u16, padding_y: u16, padding_x: u16) -> Vec<String> {
     log::trace!("In get_page");
-
-    let padding_x = 1;
-    let padding_y = 1;
+    log::debug!("terminal_y: {}", terminal_y);
+    log::debug!("terminal_x: {}", terminal_x);
 
     let mut page: Vec<String> = Vec::new();
     let mut line_count: usize = 0;
@@ -302,7 +301,7 @@ fn get_page(json: &Value, dimension_y: u16, dimension_x: u16) -> Vec<String> {
         return Vec::new();
     };
 
-    let max_lines = (dimension_y - 2 * padding_y) as usize;
+    let max_lines = (terminal_y - 2 * padding_y) as usize;
     log::debug!("max_lines: {}", max_lines);
 
     while line_count < max_lines {
@@ -310,7 +309,11 @@ fn get_page(json: &Value, dimension_y: u16, dimension_x: u16) -> Vec<String> {
 
         let content = serde_json::to_string(&current_post["content"]).unwrap();
 
-        let mut lines = chunk_string(&content, dimension_x as usize - 2 * padding_x);
+        let chunk_size = (terminal_x - 2 * padding_x) as usize;
+        log::debug!("chunk_size: {}", chunk_size);
+
+        let mut lines = chunk_string(&content, chunk_size);
+
         lines.push("".to_owned());
 
         line_count = line_count + lines.len();
@@ -328,7 +331,13 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
 
     let size = terminal::size()?;
+    let terminal_y = &size.1;
+    let terminal_x = &size.0;
+    log::debug!("Terminal dimensions: {} x {}", terminal_x, terminal_y);
 
+
+    let padding_x: u16 = 1;
+    let padding_y: u16 = 2; // does tmux status bar take up one row
 
 
     let Some(posts) = json.as_array() else {
@@ -340,7 +349,7 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
 
 
-    let page = get_page(&json, size.1, size.0);
+    let page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x);
     log::debug!("{:?}", page);
 
 
@@ -348,58 +357,30 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
 
 
-    //let first_parent = posts.iter().find(|&post| &post["parent_id"] == "").unwrap();
-    let first_parent = &posts[4];
-    log::debug!("{:?}", first_parent);
-
-    let content = serde_json::to_string(&first_parent["content"]).unwrap();
 
 
 
-
-    let mut x = 1;
-    let mut y = 2;
-
-    let mut index = 0;
-
-    while y < size.1 - 1 {
-
-        let post = &posts[index];
-
-        let content = serde_json::to_string(&post["content"]).unwrap();
-
-        let chunks = chunk_string(&content, 150);
-
-        for chunk in chunks {
-
-            let escaped_chunk = escape_for_terminal(&chunk);
+    let mut x = padding_x;
+    let mut y = padding_y;
 
 
-            stdout
-                .queue(cursor::MoveTo(x, y))?
-                .queue(style::PrintStyledContent(
-                    escaped_chunk.clone()
-                    .with(Color::Black)
-                    .on(Color::Yellow)
-                ))?;
-
-            y += 1;
-        }
-
+    for line in page.iter() {
         stdout
             .queue(cursor::MoveTo(x, y))?
             .queue(style::PrintStyledContent(
-                ""
+                line.clone()
                 .with(Color::Black)
                 .on(Color::Yellow)
             ))?;
 
         y += 1;
-
-        index += 1;
-
-
     }
+
+
+
+
+
+
 
 
 
