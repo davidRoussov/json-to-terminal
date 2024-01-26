@@ -44,6 +44,12 @@ use std::fs::OpenOptions;
 use clap::{Arg, App};
 use atty::Stream;
 
+#[derive(Clone)]
+struct Line {
+    post_id: String,
+    text: String,
+}
+
 fn get_json_from_file(file_name: &str) -> String {
     let mut file = File::open(file_name).unwrap_or_else(|err| {
         eprintln!("Failed to open file: {}", err);
@@ -293,12 +299,11 @@ fn get_page(
     padding_y: u16,
     padding_x: u16,
     offset: u16,
-) -> Vec<String> {
+) -> Vec<Line> {
     log::trace!("In get_page");
 
-    let mut page: Vec<String> = Vec::new();
+    let mut page: Vec<Line> = Vec::new();
     let mut line_count: usize = 0;
-
     let mut current_post_index = 0;
 
     let Some(posts) = json.as_array() else {
@@ -309,22 +314,41 @@ fn get_page(
     let max_lines = (terminal_y - 2 * padding_y + offset) as usize;
     log::debug!("max_lines: {}", max_lines);
 
-    while line_count < max_lines {
+    while true {
         let current_post = &posts[current_post_index];
 
+        let id = serde_json::to_string(&current_post["id"]).unwrap();
         let content = serde_json::to_string(&current_post["content"]).unwrap();
 
         let chunk_size = (terminal_x - 2 * padding_x) as usize;
         log::debug!("chunk_size: {}", chunk_size);
 
-        let mut lines = chunk_string(&content, chunk_size);
+        let strings: Vec<String> = chunk_string(&content, chunk_size);
+        let mut lines: Vec<Line> = strings
+            .iter()
+            .map(|s| Line {
+                post_id: id.clone(),
+                text: s.clone(),
+            })
+            .collect();
 
-        lines.push("".to_owned());
+        lines.push(Line {
+            post_id: "".to_string(),
+            text: "".to_string(),
+        });
 
-        line_count = line_count + lines.len();
-        current_post_index += 1;
+        if lines.len() + line_count < max_lines {
+            line_count = line_count + lines.len();
+            current_post_index += 1;
 
-        page.append(&mut lines);
+            page.append(&mut lines);
+        } else {
+            let difference = (max_lines - page.len()) as usize;
+            let mut subset_lines: Vec<Line> = lines[0..difference].to_vec();
+
+            page.append(&mut subset_lines);
+            break;
+        }
     }
 
     return page.iter().cloned().skip(offset as usize).collect();
@@ -334,7 +358,7 @@ fn print_page_to_screen(
     stdout: &mut io::Stdout,
     padding_x: u16,
     padding_y: u16,
-    page: Vec<String>
+    page: Vec<Line>
 ) -> Result<()> {
     log::trace!("In print_page_to_screen");
 
@@ -345,7 +369,7 @@ fn print_page_to_screen(
         stdout
             .queue(cursor::MoveTo(x, y))?
             .queue(style::PrintStyledContent(
-                line.clone()
+                line.text.clone()
                 .with(Color::Black)
                 .on(Color::White)
             ))?;
@@ -382,7 +406,6 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
 
     let mut page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
-    log::debug!("{:?}", page);
 
 
 
