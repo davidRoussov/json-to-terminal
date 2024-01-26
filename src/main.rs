@@ -286,10 +286,15 @@ fn escape_for_terminal(s: &str) -> String {
       // Add more replacements as needed
  }
 
-fn get_page(json: &Value, terminal_y: u16, terminal_x: u16, padding_y: u16, padding_x: u16) -> Vec<String> {
+fn get_page(
+    json: &Value,
+    terminal_y: u16, 
+    terminal_x: u16,
+    padding_y: u16,
+    padding_x: u16,
+    offset: u16,
+) -> Vec<String> {
     log::trace!("In get_page");
-    log::debug!("terminal_y: {}", terminal_y);
-    log::debug!("terminal_x: {}", terminal_x);
 
     let mut page: Vec<String> = Vec::new();
     let mut line_count: usize = 0;
@@ -301,7 +306,7 @@ fn get_page(json: &Value, terminal_y: u16, terminal_x: u16, padding_y: u16, padd
         return Vec::new();
     };
 
-    let max_lines = (terminal_y - 2 * padding_y) as usize;
+    let max_lines = (terminal_y - 2 * padding_y + offset) as usize;
     log::debug!("max_lines: {}", max_lines);
 
     while line_count < max_lines {
@@ -322,7 +327,33 @@ fn get_page(json: &Value, terminal_y: u16, terminal_x: u16, padding_y: u16, padd
         page.append(&mut lines);
     }
 
-    return page;
+    return page.iter().cloned().skip(offset as usize).collect();
+}
+
+fn print_page_to_screen(
+    stdout: &mut io::Stdout,
+    padding_x: u16,
+    padding_y: u16,
+    page: Vec<String>
+) -> Result<()> {
+    log::trace!("In print_page_to_screen");
+
+    let mut x = padding_x;
+    let mut y = padding_y;
+
+    for line in page.iter() {
+        stdout
+            .queue(cursor::MoveTo(x, y))?
+            .queue(style::PrintStyledContent(
+                line.clone()
+                .with(Color::Black)
+                .on(Color::White)
+            ))?;
+
+        y += 1;
+    }
+
+    Ok(())
 }
 
 fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
@@ -346,14 +377,12 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     };
 
 
+    let mut offset: u16 = 0;
 
 
 
-    let page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x);
+    let mut page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
     log::debug!("{:?}", page);
-
-
-
 
 
 
@@ -363,37 +392,7 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     let mut x = padding_x;
     let mut y = padding_y;
 
-
-    for line in page.iter() {
-        stdout
-            .queue(cursor::MoveTo(x, y))?
-            .queue(style::PrintStyledContent(
-                line.clone()
-                .with(Color::Black)
-                .on(Color::Yellow)
-            ))?;
-
-        y += 1;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    print_page_to_screen(stdout, padding_x, padding_y, page);
 
 
 
@@ -415,12 +414,22 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
             if event == Event::Key(KeyCode::Char('j').into()) {
                 clear_screen(stdout);
 
+                offset += 1;
+                page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
+                print_page_to_screen(stdout, padding_x, padding_y, page);
+
                 last_char = Some('j');
                 last_time = Instant::now();
             }
 
             if event == Event::Key(KeyCode::Char('k').into()) {
-                clear_screen(stdout);
+                if offset > 1 {
+                    clear_screen(stdout);
+
+                    offset -= 1;
+                    page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
+                    print_page_to_screen(stdout, padding_x, padding_y, page);
+                }
 
                 last_char = Some('k');
                 last_time = Instant::now();
