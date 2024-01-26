@@ -292,39 +292,27 @@ fn escape_for_terminal(s: &str) -> String {
       // Add more replacements as needed
  }
 
-fn get_page(
+fn get_lines(
     json: &Value,
     terminal_y: u16, 
     terminal_x: u16,
     padding_y: u16,
     padding_x: u16,
-    offset: u16,
 ) -> Vec<Line> {
-    log::trace!("In get_page");
+    log::trace!("In get_lines");
 
-    let mut page: Vec<Line> = Vec::new();
-    let mut line_count: usize = 0;
-    let mut current_post_index = 0;
-
-    let Some(posts) = json.as_array() else {
+    let Some(items) = json.as_array() else {
         log::debug!("json is not an array");
         return Vec::new();
     };
+    let chunk_size = (terminal_x - 2 * padding_x) as usize;
 
-    let max_lines = (terminal_y - 2 * padding_y + offset) as usize;
-    log::debug!("max_lines: {}", max_lines);
-
-    while true {
-        let current_post = &posts[current_post_index];
-
-        let id = serde_json::to_string(&current_post["id"]).unwrap();
-        let content = serde_json::to_string(&current_post["content"]).unwrap();
-
-        let chunk_size = (terminal_x - 2 * padding_x) as usize;
-        log::debug!("chunk_size: {}", chunk_size);
-
+    let lines: Vec<Line> = items.iter().flat_map(|item| {
+        let id = serde_json::to_string(&item["id"]).unwrap();
+        let content = serde_json::to_string(&item["content"]).unwrap();
         let strings: Vec<String> = chunk_string(&content, chunk_size);
-        let mut lines: Vec<Line> = strings
+
+        let mut current_lines: Vec<Line> = strings
             .iter()
             .map(|s| Line {
                 post_id: id.clone(),
@@ -332,26 +320,24 @@ fn get_page(
             })
             .collect();
 
-        lines.push(Line {
+        current_lines.push(Line {
             post_id: "".to_string(),
             text: "".to_string(),
         });
 
-        if lines.len() + line_count < max_lines {
-            line_count = line_count + lines.len();
-            current_post_index += 1;
+        return current_lines;
+    }).collect();
 
-            page.append(&mut lines);
-        } else {
-            let difference = (max_lines - page.len()) as usize;
-            let mut subset_lines: Vec<Line> = lines[0..difference].to_vec();
+    return lines;
+}
 
-            page.append(&mut subset_lines);
-            break;
-        }
-    }
+fn get_page(lines: &Vec<Line>, terminal_y: u16, padding_y: u16, offset: usize) -> Vec<Line> {
+    log::trace!("In get_page");
 
-    return page.iter().cloned().skip(offset as usize).collect();
+    let max_lines = (terminal_y - 2 * padding_y) as usize;
+    log::debug!("max_lines: {}", max_lines);
+
+    return lines[offset..max_lines + offset].to_vec();
 }
 
 fn print_page_to_screen(
@@ -392,7 +378,7 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
 
     let padding_x: u16 = 1;
-    let padding_y: u16 = 2; // does tmux status bar take up one row
+    let padding_y: u16 = 1; // does tmux status bar take up one row
 
 
     let Some(posts) = json.as_array() else {
@@ -401,11 +387,15 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     };
 
 
-    let mut offset: u16 = 0;
+    let mut offset: usize = 0;
 
 
 
-    let mut page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
+    let lines = get_lines(&json, *terminal_y, *terminal_x, padding_y, padding_x);
+
+
+
+    let mut page: Vec<Line> = get_page(&lines, *terminal_y, padding_y, offset);
 
 
 
@@ -438,7 +428,7 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
                 clear_screen(stdout);
 
                 offset += 1;
-                page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
+                page = get_page(&lines, *terminal_y, padding_y, offset);
                 print_page_to_screen(stdout, padding_x, padding_y, page);
 
                 last_char = Some('j');
@@ -450,7 +440,7 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
                     clear_screen(stdout);
 
                     offset -= 1;
-                    page = get_page(&json, *terminal_y, *terminal_x, padding_y, padding_x, offset);
+                    page = get_page(&lines, *terminal_y, padding_y, offset);
                     print_page_to_screen(stdout, padding_x, padding_y, page);
                 }
 
@@ -544,139 +534,6 @@ fn main() -> io::Result<()> {
 
 
     cleanup(stdout);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //let line_length: u16;
-    //let mut page_right_margin: u16 = 2;
-    //let mut paddingX: u16 = 0;
-    //let mut paddingY: u16 = 0;
-    //let size = terminal::size()?;
-
-    //if size.0 > 0 && size.0 < 100 {
-    //    paddingX = 1;
-    //    paddingY = 0;
-    //    line_length = size.0 - 2 * paddingX - page_right_margin;
-    //} else if size.0 >= 100 && size.0 < 150 {
-    //    paddingX = 3;
-    //    paddingY = 1;
-    //    line_length = (size.0 - 2 * paddingX) / 2 - page_right_margin;
-    //} else {
-    //    paddingX = 5;
-    //    paddingY = 2;
-    //    line_length = 60 - page_right_margin;
-    //}
-    //log::debug!("Padding dimensions: {} x {}", paddingX, paddingY);
-    //log::debug!("Line length: {}", line_length);
-
-    //let page_height: u16 = size.1 - 2 * paddingY;
-    //log::debug!("Page height: {}", page_height);
-    //
-
-
-
-
-    //let args: Vec<String> = env::args().collect();
-
-    //let file_name = &args[1];
-
-    //let json: Value = get_json_from_file(file_name);
-    //log::debug!("Title: {}", json["title"]);
-
-
-
-
-    //let mut vec = flatten_json(json, line_length);
-
-
-
-    //let total_pages: u16 = (vec.len() as u16) / page_height;
-    //log::debug!("Number of pages: {}", total_pages);
-
-
-
-
-    //let mut start_page: usize = 0;
-
-
-
-
-    //print_to_screen(&mut stdout, &mut vec, line_length, start_page, paddingX, paddingY, page_right_margin, page_height);
-
-
-
-
-
-
-
-    //let mut last_char = None;
-    //let mut last_time = Instant::now();
-
-    //loop {
-    //    if poll(Duration::from_millis(1_000))? {
-    //        let event = read()?;
-
-    //        if event == Event::Key(KeyCode::Char('q').into()) {
-    //            break;
-    //        }
-
-    //        if event == Event::Key(KeyCode::Char('j').into()) {
-    //            if start_page < (total_pages as usize) {
-    //                clear_screen(&mut stdout);
-    //                start_page += 1;
-    //                print_to_screen(&mut stdout, &mut vec, line_length, start_page, paddingX, paddingY, page_right_margin, page_height);
-    //            }
-
-    //            last_char = Some('j');
-    //            last_time = Instant::now();
-    //        }
-
-    //        if event == Event::Key(KeyCode::Char('k').into()) {
-    //            if start_page > 0 {
-    //                clear_screen(&mut stdout);
-    //                start_page -= 1;
-    //                print_to_screen(&mut stdout, &mut vec, line_length, start_page, paddingX, paddingY, page_right_margin, page_height);
-    //            }
-
-    //            last_char = Some('k');
-    //            last_time = Instant::now();
-    //        }
-
-    //        if event == Event::Key(KeyCode::Char('g').into()) {
-
-    //            if last_char == Some('g') && last_time.elapsed() < Duration::from_millis(500) {
-    //                clear_screen(&mut stdout);
-    //                start_page = 0;
-    //                print_to_screen(&mut stdout, &mut vec, line_length, start_page, paddingX, paddingY, page_right_margin, page_height);
-    //            }
-
-    //            last_char = Some('g');
-    //            last_time = Instant::now();
-    //        }
-
-    //        if event == Event::Key(KeyCode::Char('G').into()) {
-    //            clear_screen(&mut stdout);
-    //            start_page = total_pages as usize;
-    //            print_to_screen(&mut stdout, &mut vec, line_length, start_page, paddingX, paddingY, page_right_margin, page_height);
-
-    //            last_char = Some('G');
-    //            last_time = Instant::now();
-    //        }
-    //    }
-    //}
-
-    //cleanup(stdout);
 
     Ok(())
 }
