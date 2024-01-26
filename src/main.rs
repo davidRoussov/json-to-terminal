@@ -344,7 +344,8 @@ fn print_page_to_screen(
     stdout: &mut io::Stdout,
     padding_x: u16,
     padding_y: u16,
-    page: Vec<Line>
+    page: Vec<Line>,
+    current_item_id: String,
 ) -> Result<()> {
     log::trace!("In print_page_to_screen");
 
@@ -352,12 +353,15 @@ fn print_page_to_screen(
     let mut y = padding_y;
 
     for line in page.iter() {
+
+        let background = if &current_item_id == &line.post_id { Color::Yellow } else { Color::White };
+
         stdout
             .queue(cursor::MoveTo(x, y))?
             .queue(style::PrintStyledContent(
                 line.text.clone()
                 .with(Color::Black)
-                .on(Color::White)
+                .on(background)
             ))?;
 
         y += 1;
@@ -366,52 +370,52 @@ fn print_page_to_screen(
     Ok(())
 }
 
+fn get_next_item_id(lines: &Vec<Line>, current_item_id: &String) -> String {
+    log::trace!("In get_next_item_id");
+    log::debug!("current_item_id: {}", current_item_id);
+
+    let mut found_current_lines = false;
+    let mut next_item_id = current_item_id.clone();
+
+    for line in lines.iter() {
+        log::debug!("post_id: {}", &line.post_id);
+
+        let post_id = &line.post_id;
+
+        if post_id == "" {
+            continue;
+        }
+
+        if post_id == current_item_id {
+            found_current_lines = true;
+        } else if post_id != current_item_id && found_current_lines {
+            next_item_id = post_id.clone();
+            break;
+        }
+    }
+
+    return next_item_id;
+}
+
 fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
     log::trace!("In conversation_to_terminal");
-
-
 
     let size = terminal::size()?;
     let terminal_y = &size.1;
     let terminal_x = &size.0;
     log::debug!("Terminal dimensions: {} x {}", terminal_x, terminal_y);
 
-
     let padding_x: u16 = 1;
     let padding_y: u16 = 1; // does tmux status bar take up one row
-
-
-    let Some(posts) = json.as_array() else {
-        log::debug!("json is not an array");
-        return Ok(());
-    };
-
-
-    let mut offset: usize = 0;
-
-
+    log::debug!("padding_x: {}, padding_y: {}", padding_x, padding_y);
 
     let lines = get_lines(&json, *terminal_y, *terminal_x, padding_y, padding_x);
 
-
-
+    let mut offset: usize = 0;
     let mut page: Vec<Line> = get_page(&lines, *terminal_y, padding_y, offset);
+    let mut current_item_id = page[0].post_id.clone();
 
-
-
-
-
-
-    let mut x = padding_x;
-    let mut y = padding_y;
-
-    print_page_to_screen(stdout, padding_x, padding_y, page);
-
-
-
-
-
-
+    print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
     let mut last_char = None;
     let mut last_time = Instant::now();
@@ -427,9 +431,12 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
             if event == Event::Key(KeyCode::Char('j').into()) {
                 clear_screen(stdout);
 
-                offset += 1;
+                //offset += 1;
+                current_item_id = get_next_item_id(&lines, &current_item_id.clone());
+                log::debug!("current_item_id: {}", current_item_id);
+
                 page = get_page(&lines, *terminal_y, padding_y, offset);
-                print_page_to_screen(stdout, padding_x, padding_y, page);
+                print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
                 last_char = Some('j');
                 last_time = Instant::now();
@@ -441,7 +448,7 @@ fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
                     offset -= 1;
                     page = get_page(&lines, *terminal_y, padding_y, offset);
-                    print_page_to_screen(stdout, padding_x, padding_y, page);
+                    print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
                 }
 
                 last_char = Some('k');
