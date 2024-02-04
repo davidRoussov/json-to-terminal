@@ -44,6 +44,10 @@ use std::fs::OpenOptions;
 use clap::{Arg, App};
 use atty::Stream;
 
+mod interfaces {
+    pub mod list;
+}
+
 #[derive(Clone)]
 struct Line {
     post_id: String,
@@ -424,8 +428,8 @@ fn get_next_item_id(lines: &Vec<Line>, current_item_id: &String) -> String {
     return next_item_id;
 }
 
-fn conversation_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
-    log::trace!("In conversation_to_terminal");
+fn chat_to_terminal(stdout: &mut io::Stdout, json: Value) -> Result<()> {
+    log::trace!("In chat_to_terminal");
 
     let size = terminal::size()?;
     let terminal_y = &size.1;
@@ -560,7 +564,8 @@ fn main() -> io::Result<()> {
         log::debug!("data_type: {}", data_type);
 
         match data_type {
-            "conversation" => conversation_to_terminal(&mut stdout, json)?,
+            "chat" => chat_to_terminal(&mut stdout, json)?,
+            "list" => interfaces::list::start_list_interface(&mut stdout, json)?,
             _ => log::error!("Unexpected data type: {}", data_type),
         }
     } else {
