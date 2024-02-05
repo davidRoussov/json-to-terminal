@@ -30,6 +30,15 @@ use crossterm::{
 use std::io::{self, Write};
 use serde_json::Value;
 use std::{io::stdout, time::Duration, time::Instant};
+use uuid::Uuid;
+use std::collections::HashMap;
+
+#[derive(Clone)]
+struct Line {
+    text: String,
+    id: String,
+    data: HashMap<String, String>,
+}
 
 pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> {
     log::trace!("In start_list_interface");
@@ -40,13 +49,13 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     log::debug!("Terminal dimensions: {} x {}", terminal_x, terminal_y);
 
     let padding_x: u16 = 1;
-    let padding_y: u16 = 1; // does tmux status bar take up one row
+    let padding_y: u16 = 1;
     log::debug!("padding_x: {}, padding_y: {}", padding_x, padding_y);
 
     let lines = get_lines(&json, *terminal_y, *terminal_x, padding_y, padding_x);
 
     let mut offset: usize = 0;
-    let mut page: Vec<String> = get_page(&lines, *terminal_y, padding_y, offset);
+    let mut page: Vec<Line> = get_page(&lines, *terminal_y, padding_y, offset);
 
     print_page_to_screen(stdout, padding_x, padding_y, page);
 
@@ -123,7 +132,7 @@ fn print_page_to_screen(
     stdout: &mut io::Stdout,
     padding_x: u16,
     padding_y: u16,
-    page: Vec<String>,
+    page: Vec<Line>,
 ) -> Result<()> {
     log::trace!("In print_page_to_screen");
 
@@ -132,12 +141,10 @@ fn print_page_to_screen(
 
     for line in page.iter() {
 
-        log::debug!("line: {}", line);
-
         stdout
             .queue(cursor::MoveTo(x, y))?
             .queue(style::PrintStyledContent(
-                line.clone()
+                line.text.clone()
                 .with(Color::Black)
                 .on(Color::White)
             ))?;
@@ -148,7 +155,7 @@ fn print_page_to_screen(
     Ok(())
 }
 
-fn get_page(lines: &Vec<String>, terminal_y: u16, padding_y: u16, offset: usize) -> Vec<String> {
+fn get_page(lines: &Vec<Line>, terminal_y: u16, padding_y: u16, offset: usize) -> Vec<Line> {
     log::trace!("In get_page");
 
     let max_lines = (terminal_y - 2 * padding_y) as usize;
@@ -163,10 +170,10 @@ fn get_lines(
     terminal_x: u16,
     padding_y: u16,
     padding_x: u16,
-) -> Vec<String> {
+) -> Vec<Line> {
     log::trace!("In get_lines");
 
-    let mut lines: Vec<String> = Vec::new();
+    let mut lines: Vec<Line> = Vec::new();
 
     let Some(items) = json["items"].as_array() else {
         log::debug!("json items is not an array");
@@ -178,27 +185,57 @@ fn get_lines(
 
     for item in items.iter() {
         if let Some(obj_map) = item["data"].as_object() {
-            let mut current_line: String = "".to_string();
+            let mut current_line = Line {
+                id: Uuid::new_v4().to_string(),
+                text: "".to_string(),
+                data: HashMap::new(),
+            };
 
-            for (key, value) in obj_map.iter() {
-                log::debug!("key: {}", key);
-                log::debug!("value: {}", value);
+            for (serde_key, serde_value) in obj_map.iter() {
+                log::debug!("serde_key: {}", serde_key);
+                log::debug!("serde_value: {}", serde_value);
 
+                let serde_key_str = serde_key;
+                let serde_value_str = serde_value.as_str().expect("value is not a string");
+                let key = serde_key_str.to_string();
+                let value = serde_value_str.to_string();
                 let segment = format!("{}: {} ", key, value);
 
                 if segment.len() > chunk_size {
                     log::info!("Segment length is greater than screen width");
 
-                } else if current_line.len() + segment.len() < chunk_size {
-                    current_line += &segment;
-                } else if current_line.len() + segment.len() > chunk_size {
+                } else if current_line.text.len() + segment.len() < chunk_size {
+                    current_line.text += &segment;
+                    current_line.data.insert(key, value);
+
+                } else if current_line.text.len() + segment.len() > chunk_size {
                     lines.push(current_line);
-                    current_line = segment;
+                    current_line = Line {
+                        id: Uuid::new_v4().to_string(),
+                        text: segment,
+                        data: HashMap::new(),
+                    };
+                    current_line.data.insert(key, value);
                 }
+                        
+            }
+
+            if current_line.text.len() > 0 {
+                lines.push(current_line);
+                current_line = Line {
+                    id: Uuid::new_v4().to_string(),
+                    text: "".to_string(),
+                    data: HashMap::new(),
+                };
             }
         }
 
-        lines.push("".to_string());
+        let blank_line = Line {
+            id: "".to_string(),
+            text: "".to_string(),
+            data: HashMap::new(),
+        };
+        lines.push(blank_line);
     }
 
     return lines;
