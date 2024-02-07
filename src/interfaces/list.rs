@@ -140,14 +140,35 @@ fn print_page_to_screen(
     let mut y = padding_y;
 
     for line in page.iter() {
+        let mut z = x;
 
-        stdout
-            .queue(cursor::MoveTo(x, y))?
-            .queue(style::PrintStyledContent(
-                line.text.clone()
-                .with(Color::Black)
-                .on(Color::White)
-            ))?;
+        for (key, value) in line.data.iter() {
+            let label = format!("{}: ", key);
+            let content = format!("{} ", value);
+
+            stdout
+                .queue(cursor::MoveTo(z, y))?
+                .queue(style::PrintStyledContent(
+                    label.clone()
+                    .with(Color::Black)
+                    .on(Color::White)
+                    .attribute(Attribute::Bold)
+                ))?;
+
+            z += label.len() as u16;
+
+            stdout
+                .queue(cursor::MoveTo(z, y))?
+                .queue(style::PrintStyledContent(
+                    content.clone()
+                    .with(Color::Black)
+                    .on(Color::White)
+                ))?;
+
+            z += content.len() as u16;
+
+            stdout.flush()?;
+        }
 
         y += 1;
     }
