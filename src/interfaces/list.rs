@@ -56,8 +56,9 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
 
     let mut offset: usize = 0;
     let mut page: Vec<Line> = get_page(&lines, *terminal_y, padding_y, offset);
+    let mut current_item_id = page[0].id.clone();
 
-    print_page_to_screen(stdout, padding_x, padding_y, page);
+    print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
     let mut last_char = None;
     let mut last_time = Instant::now();
@@ -74,7 +75,7 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
                 clear_screen(stdout);
 
                 page = get_page(&lines, *terminal_y, padding_y, offset);
-                print_page_to_screen(stdout, padding_x, padding_y, page);
+                print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
                 last_char = Some('j');
                 last_time = Instant::now();
@@ -84,7 +85,7 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
                 clear_screen(stdout);
 
                 page = get_page(&lines, *terminal_y, padding_y, offset);
-                print_page_to_screen(stdout, padding_x, padding_y, page);
+                print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
                 last_char = Some('k');
                 last_time = Instant::now();
@@ -133,6 +134,7 @@ fn print_page_to_screen(
     padding_x: u16,
     padding_y: u16,
     page: Vec<Line>,
+    current_item_id: String,
 ) -> Result<()> {
     log::trace!("In print_page_to_screen");
 
@@ -146,12 +148,14 @@ fn print_page_to_screen(
             let label = format!("{}: ", key);
             let content = format!("{} ", value);
 
+            let background = if &current_item_id == &line.id { Color::Yellow } else { Color::White };
+
             stdout
                 .queue(cursor::MoveTo(z, y))?
                 .queue(style::PrintStyledContent(
                     label.clone()
                     .with(Color::Black)
-                    .on(Color::White)
+                    .on(background)
                     .attribute(Attribute::Bold)
                 ))?;
 
@@ -162,7 +166,7 @@ fn print_page_to_screen(
                 .queue(style::PrintStyledContent(
                     content.clone()
                     .with(Color::Black)
-                    .on(Color::White)
+                    .on(background)
                 ))?;
 
             z += content.len() as u16;
@@ -214,8 +218,13 @@ fn get_lines(
             sorted_data.sort_by(|a, b| a.0.cmp(&b.0));
 
 
+            let id = Uuid::new_v4().to_string();
+            log::debug!("id: {}", id);
+
+
+
             let mut current_line = Line {
-                id: Uuid::new_v4().to_string(),
+                id: id.clone(),
                 text: "".to_string(),
                 data: LinkedHashMap::new(),
             };
@@ -240,7 +249,7 @@ fn get_lines(
                 } else if current_line.text.len() + segment.len() > chunk_size {
                     lines.push(current_line);
                     current_line = Line {
-                        id: Uuid::new_v4().to_string(),
+                        id: id.clone(),
                         text: segment,
                         data: LinkedHashMap::new(),
                     };
@@ -252,7 +261,7 @@ fn get_lines(
             if current_line.text.len() > 0 {
                 lines.push(current_line);
                 current_line = Line {
-                    id: Uuid::new_v4().to_string(),
+                    id: id.clone(),
                     text: "".to_string(),
                     data: LinkedHashMap::new(),
                 };
