@@ -74,6 +74,7 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
             if event == Event::Key(KeyCode::Char('j').into()) {
                 clear_screen(stdout);
 
+                current_item_id = get_next_item_id(&lines, &current_item_id.clone());
                 page = get_page(&lines, *terminal_y, padding_y, offset);
                 print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
@@ -84,6 +85,7 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
             if event == Event::Key(KeyCode::Char('k').into()) {
                 clear_screen(stdout);
 
+                current_item_id = get_previous_item_id(&lines, &current_item_id.clone());
                 page = get_page(&lines, *terminal_y, padding_y, offset);
                 print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
@@ -277,4 +279,58 @@ fn get_lines(
     }
 
     return lines;
+}
+
+fn get_next_item_id(lines: &Vec<Line>, current_item_id: &String) -> String {
+    log::trace!("In get_next_item_id");
+    log::debug!("current_item_id: {}", current_item_id);
+
+    let mut found_current_lines = false;
+    let mut next_item_id = current_item_id.clone();
+
+    for line in lines.iter() {
+        log::debug!("id: {}", &line.id);
+
+        let id = &line.id;
+
+        if id == "" {
+            continue;
+        }
+
+        if id == current_item_id {
+            found_current_lines = true;
+        } else if id != current_item_id && found_current_lines {
+            next_item_id = id.clone();
+            break;
+        }
+    }
+
+    return next_item_id;
+}
+
+fn get_previous_item_id(lines: &Vec<Line>, current_item_id: &String) -> String {
+    log::trace!("In get_previous_item_id");
+    log::debug!("current_item_id: {}", current_item_id);
+
+    let mut found_current_lines = false;
+    let mut next_item_id = current_item_id.clone();
+
+    for line in lines.iter().rev() {
+        log::debug!("id: {}", &line.id);
+
+        let id = &line.id;
+
+        if id == "" {
+            continue;
+        }
+
+        if id == current_item_id {
+            found_current_lines = true;
+        } else if id != current_item_id && found_current_lines {
+            next_item_id = id.clone();
+            break;
+        }
+    }
+
+    return next_item_id;
 }
