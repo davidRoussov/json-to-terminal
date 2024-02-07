@@ -31,13 +31,13 @@ use std::io::{self, Write};
 use serde_json::Value;
 use std::{io::stdout, time::Duration, time::Instant};
 use uuid::Uuid;
-use std::collections::HashMap;
+use linked_hash_map::LinkedHashMap;
 
 #[derive(Clone)]
 struct Line {
     text: String,
     id: String,
-    data: HashMap<String, String>,
+    data: LinkedHashMap<String, String>,
 }
 
 pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> {
@@ -206,13 +206,21 @@ fn get_lines(
 
     for item in items.iter() {
         if let Some(obj_map) = item["data"].as_object() {
+
+            let mut sorted_data: Vec<(String, Value)> = obj_map.iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
+
+            sorted_data.sort_by(|a, b| a.0.cmp(&b.0));
+
+
             let mut current_line = Line {
                 id: Uuid::new_v4().to_string(),
                 text: "".to_string(),
-                data: HashMap::new(),
+                data: LinkedHashMap::new(),
             };
 
-            for (serde_key, serde_value) in obj_map.iter() {
+            for (serde_key, serde_value) in sorted_data.iter() {
                 log::debug!("serde_key: {}", serde_key);
                 log::debug!("serde_value: {}", serde_value);
 
@@ -234,7 +242,7 @@ fn get_lines(
                     current_line = Line {
                         id: Uuid::new_v4().to_string(),
                         text: segment,
-                        data: HashMap::new(),
+                        data: LinkedHashMap::new(),
                     };
                     current_line.data.insert(key, value);
                 }
@@ -246,7 +254,7 @@ fn get_lines(
                 current_line = Line {
                     id: Uuid::new_v4().to_string(),
                     text: "".to_string(),
-                    data: HashMap::new(),
+                    data: LinkedHashMap::new(),
                 };
             }
         }
@@ -254,7 +262,7 @@ fn get_lines(
         let blank_line = Line {
             id: "".to_string(),
             text: "".to_string(),
-            data: HashMap::new(),
+            data: LinkedHashMap::new(),
         };
         lines.push(blank_line);
     }
