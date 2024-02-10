@@ -202,8 +202,18 @@ fn get_lines(
 
     let mut lines: Vec<Line> = Vec::new();
 
-    let Some(items) = json["items"].as_array() else {
+    let Some(all_items) = json.as_array() else {
         log::debug!("json items is not an array");
+        return Vec::new();
+    };
+
+    let Some(first_object) = all_items[0].as_object() else {
+        log::debug!("First element of JSON is not an object");
+        return Vec::new();
+    };
+
+    let Some(items) = first_object["items"].as_array() else {
+        log::debug!("first element items of json is not an array");
         return Vec::new();
     };
 
