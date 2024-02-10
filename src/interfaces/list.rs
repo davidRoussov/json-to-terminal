@@ -38,9 +38,28 @@ fn handle_events() -> io::Result<bool> {
 }
 
 fn ui(frame: &mut Frame) {
+    let main_layout = Layout::new(
+        Direction::Vertical,
+        [
+            Constraint::Length(4),
+            Constraint::Min(0),
+        ],
+    )
+    .split(frame.size());
+
     frame.render_widget(
-        Paragraph::new("Hello World!")
-            .block(Block::default().title("Greeting").borders(Borders::ALL)),
-        frame.size(),
+        Block::new().borders(Borders::TOP).title("Document"),
+        main_layout[0],
+    );
+
+    frame.render_widget(
+        Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"])
+            .block(Block::default().title("Lists").borders(Borders::ALL))
+            .style(Style::default().white())
+            .highlight_style(Style::default().yellow())
+            .select(0)
+            .divider(symbols::DOT)
+            .padding("->", "<-"),
+        main_layout[1],
     );
 }
