@@ -32,8 +32,10 @@ use serde_json::Value;
 use std::{io::stdout, time::Duration, time::Instant};
 use uuid::Uuid;
 use linked_hash_map::LinkedHashMap;
+use std::cmp;
 
 #[derive(Clone)]
+#[derive(Debug)]
 struct Line {
     text: String,
     id: String,
@@ -53,12 +55,15 @@ pub fn start_list_interface(stdout: &mut io::Stdout, json: Value) -> Result<()> 
     log::debug!("padding_x: {}, padding_y: {}", padding_x, padding_y);
 
     let lines = get_lines(&json, *terminal_y, *terminal_x, padding_y, padding_x);
+    log::debug!("{:?}", lines);
 
     let mut offset: usize = 0;
     let mut page: Vec<Line> = get_page(&lines, *terminal_y, padding_y, offset);
     let mut current_item_id = page[0].id.clone();
 
-    print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
+    log::debug!("fucfucfucfucfucfucfucfucfucfucfucfucfuckkkkkkkkkkkkk");
+
+    //print_page_to_screen(stdout, padding_x, padding_y, page, current_item_id.clone());
 
     let mut last_char = None;
     let mut last_time = Instant::now();
@@ -184,11 +189,18 @@ fn print_page_to_screen(
 
 fn get_page(lines: &Vec<Line>, terminal_y: u16, padding_y: u16, offset: usize) -> Vec<Line> {
     log::trace!("In get_page");
+    log::debug!("offset: {}", offset);
+    log::debug!("lines length: {}", lines.len());
 
     let max_lines = (terminal_y - 2 * padding_y) as usize;
     log::debug!("max_lines: {}", max_lines);
 
-    return lines[offset..max_lines + offset].to_vec();
+    let max_lines = cmp::min(max_lines, lines.len());
+    log::debug!("max_lines: {}", max_lines);
+
+    let page = lines[offset..max_lines + offset].to_vec();
+
+    return page;
 }
 
 fn get_lines(
@@ -223,61 +235,38 @@ fn get_lines(
     for item in items.iter() {
         if let Some(obj_map) = item["data"].as_object() {
 
-            let mut sorted_data: Vec<(String, Value)> = obj_map.iter()
-                .map(|(key, value)| (key.clone(), value.clone()))
-                .collect();
-
-            sorted_data.sort_by(|a, b| a.0.cmp(&b.0));
-
-
             let id = Uuid::new_v4().to_string();
             log::debug!("id: {}", id);
 
-
-
-            let mut current_line = Line {
+            let mut line = Line {
                 id: id.clone(),
                 text: "".to_string(),
                 data: LinkedHashMap::new(),
             };
 
-            for (serde_key, serde_value) in sorted_data.iter() {
-                log::debug!("serde_key: {}", serde_key);
-                log::debug!("serde_value: {}", serde_value);
+            let title = obj_map["title"].as_str().expect("title is not a string");
 
-                let serde_key_str = serde_key;
-                let serde_value_str = serde_value.as_str().expect("value is not a string");
-                let key = serde_key_str.to_string();
-                let value = serde_value_str.to_string();
-                let segment = format!("{}: {} ", key, value);
-
-                if segment.len() > chunk_size {
-                    log::info!("Segment length is greater than screen width");
-
-                } else if current_line.text.len() + segment.len() < chunk_size {
-                    current_line.text += &segment;
-                    current_line.data.insert(key, value);
-
-                } else if current_line.text.len() + segment.len() > chunk_size {
-                    lines.push(current_line);
-                    current_line = Line {
-                        id: id.clone(),
-                        text: segment,
-                        data: LinkedHashMap::new(),
-                    };
-                    current_line.data.insert(key, value);
-                }
-                        
+            if title.len() > chunk_size {
+                panic!("Title lengths is greater than chunk size");
             }
 
-            if current_line.text.len() > 0 {
-                lines.push(current_line);
-                current_line = Line {
-                    id: id.clone(),
-                    text: "".to_string(),
-                    data: LinkedHashMap::new(),
-                };
-            }
+            line.text = title.to_string();
+            line.data.insert("title".to_string(), title.to_string());
+
+            lines.push(line);
+
+
+
+            //let mut current_lines = get_lines_sorted_alphabetical(
+            //    obj_map,
+            //    terminal_y,
+            //    terminal_x,
+            //    padding_y,
+            //    padding_x
+            //);
+            //lines.append(&mut current_lines);
+
+
         }
 
         let blank_line = Line {
@@ -286,6 +275,76 @@ fn get_lines(
             data: LinkedHashMap::new(),
         };
         lines.push(blank_line);
+    }
+
+    return lines;
+}
+
+fn get_lines_sorted_alphabetical(
+    object: &serde_json::Map<std::string::String, Value>,
+    terminal_y: u16,
+    terminal_x: u16,
+    padding_y: u16,
+    padding_x: u16,
+) -> Vec<Line> {
+    log::trace!("In get_lines_sorted_alphabetical");
+
+    let chunk_size = (terminal_x - 2 * padding_x) as usize;
+    log::debug!("chunk_size: {}", chunk_size);
+
+    let mut lines: Vec<Line> = Vec::new();
+
+    let mut sorted_data: Vec<(String, Value)> = object.iter()
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+
+    sorted_data.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let id = Uuid::new_v4().to_string();
+    log::debug!("id: {}", id);
+
+    let mut current_line = Line {
+        id: id.clone(),
+        text: "".to_string(),
+        data: LinkedHashMap::new(),
+    };
+
+    for (serde_key, serde_value) in sorted_data.iter() {
+        log::debug!("serde_key: {}", serde_key);
+        log::debug!("serde_value: {}", serde_value);
+
+        let serde_key_str = serde_key;
+        let serde_value_str = serde_value.as_str().expect("value is not a string");
+        let key = serde_key_str.to_string();
+        let value = serde_value_str.to_string();
+        let segment = format!("{}: {} ", key, value);
+
+        if segment.len() > chunk_size {
+            log::info!("Segment length is greater than screen width");
+
+        } else if current_line.text.len() + segment.len() < chunk_size {
+            current_line.text += &segment;
+            current_line.data.insert(key, value);
+
+        } else if current_line.text.len() + segment.len() > chunk_size {
+            lines.push(current_line);
+            current_line = Line {
+                id: id.clone(),
+                text: segment,
+                data: LinkedHashMap::new(),
+            };
+            current_line.data.insert(key, value);
+        }
+                
+    }
+
+    if current_line.text.len() > 0 {
+        lines.push(current_line);
+        current_line = Line {
+            id: id.clone(),
+            text: "".to_string(),
+            data: LinkedHashMap::new(),
+        };
     }
 
     return lines;
