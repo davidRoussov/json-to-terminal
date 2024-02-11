@@ -89,7 +89,7 @@ fn main() -> io::Result<()> {
         log::debug!("data_type: {}", data_type);
 
         match data_type {
-            "list" => interfaces::list::start_list_interface(json)?,
+            "list" => interfaces::list::start_list_interface(json).expect("Could not start list interface"),
             _ => log::error!("Unexpected data type: {}", data_type),
         }
     } else {

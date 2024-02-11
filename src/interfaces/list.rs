@@ -2,42 +2,83 @@ use std::io::{self, stdout};
 
 use serde_json::Value;
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode::Char},
+    execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
 
-pub fn start_list_interface(json: Value) -> io::Result<()> {
+type Err = Box<dyn std::error::Error>;
+type Result<T> = std::result::Result<T, Err>;
+
+struct App {
+  counter: i64,
+  should_quit: bool,
+}
+
+pub fn start_list_interface(json: Value) -> Result<()> {
     log::trace!("In start_list_interface");
-
-    enable_raw_mode()?;
-    stdout().execute(EnterAlternateScreen)?;
-    let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-
-    let mut should_quit = false;
-    while !should_quit {
-        terminal.draw(ui)?;
-        should_quit = handle_events()?;
-    }
-
-    disable_raw_mode()?;
-    stdout().execute(LeaveAlternateScreen)?;
+    startup()?;
+    let status = run(json.clone());
+    shutdown()?;
+    status?;
     Ok(())
 }
 
-fn handle_events() -> io::Result<bool> {
-    if event::poll(std::time::Duration::from_millis(50))? {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                return Ok(true);
-            }
+fn run(json: Value) -> Result<()> {
+    let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
+
+    let mut app = App { counter: 0, should_quit: false };
+
+    loop {
+        t.draw(|f| {
+            ui(&app, f);
+        });
+
+        update(&mut app)?;
+
+        if app.should_quit {
+            break;
         }
     }
-    Ok(false)
+
+    Ok(())
 }
 
-fn ui(frame: &mut Frame) {
+fn startup() -> Result<()> {
+  enable_raw_mode()?;
+  execute!(std::io::stderr(), EnterAlternateScreen)?;
+  Ok(())
+}
+
+fn shutdown() -> Result<()> {
+  execute!(std::io::stderr(), LeaveAlternateScreen)?;
+  disable_raw_mode()?;
+  Ok(())
+}
+
+fn update(app: &mut App) -> Result<()> {
+    if event::poll(std::time::Duration::from_millis(50))? {
+        if let Event::Key(key) = event::read()? {
+            if key.kind == event::KeyEventKind::Press {
+                match key.code {
+                    Char('j') => app.counter += 1,
+                    Char('k') => app.counter -= 1,
+                    Char('q') => app.should_quit = true,
+                    _ => {},
+                }
+            }
+
+        }
+    }
+    Ok(())
+}
+
+fn ui(app: &App, frame: &mut Frame) {
+
+    let current_tab: usize = 0;
+
     let main_layout = Layout::new(
         Direction::Vertical,
         [
@@ -52,14 +93,15 @@ fn ui(frame: &mut Frame) {
         main_layout[0],
     );
 
+    let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"])
+        .block(Block::default().title("Lists").borders(Borders::ALL))
+        .style(Style::default().white())
+        .highlight_style(Style::default().yellow())
+        .select(current_tab)
+        .divider(symbols::DOT);
+
     frame.render_widget(
-        Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"])
-            .block(Block::default().title("Lists").borders(Borders::ALL))
-            .style(Style::default().white())
-            .highlight_style(Style::default().yellow())
-            .select(0)
-            .divider(symbols::DOT)
-            .padding("->", "<-"),
+        tabs,
         main_layout[1],
     );
 }
