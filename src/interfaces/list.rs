@@ -149,22 +149,57 @@ fn ui(app: &App, frame: &mut Frame) {
     //    main_layout[0],
     //);
 
-    frame.render_widget(
-        Paragraph::new(format!(
-            "
-            {:?}
-            ",
-            app.lists
-          ))
-          .block(
-            Block::default()
-              .title("Lists")
-              .title_alignment(Alignment::Center)
-              .borders(Borders::ALL)
-              .border_type(BorderType::Rounded),
-          )
-          .style(Style::default().fg(Color::Yellow))
-          .alignment(Alignment::Center),
-        frame.size()
-  );
+
+
+    let vertical_scroll = 0;
+
+    let items: Vec<Line> = app.lists[0].items.iter().map(|item| {
+        Line::from(item.data.get("title").expect("Failed to get title").as_str())
+    }).collect();
+
+    let paragraph = Paragraph::new(items.clone())
+        .scroll((vertical_scroll as u16, 0))
+        .block(Block::new().borders(Borders::RIGHT)); // to show a background for the scrollbar
+
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(Some("↑"))
+        .end_symbol(Some("↓"));
+
+    let mut scrollbar_state = ScrollbarState::new(items.len()).position(vertical_scroll);
+
+    let area = frame.size();
+    // Note we render the paragraph
+    frame.render_widget(paragraph, area);
+    // and the scrollbar, those are separate widgets
+    frame.render_stateful_widget(
+        scrollbar,
+        area.inner(&Margin {
+            // using an inner vertical margin of 1 unit makes the scrollbar inside the block
+            vertical: 1,
+            horizontal: 0,
+        }),
+        &mut scrollbar_state,
+    );
+
+
+
+  //  frame.render_widget(
+  //      Paragraph::new(format!(
+  //          "
+  //          {:?}
+  //          ",
+  //          app.lists
+  //        ))
+  //        .block(
+  //          Block::default()
+  //            .title("Lists")
+  //            .title_alignment(Alignment::Center)
+  //            .borders(Borders::ALL)
+  //            .border_type(BorderType::Rounded),
+  //        )
+  //        .style(Style::default().fg(Color::Yellow))
+  //        .wrap(Wrap { trim: true })
+  //        .alignment(Alignment::Center),
+  //      frame.size()
+  //    );
 }
