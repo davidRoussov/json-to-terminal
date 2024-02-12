@@ -8,30 +8,59 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
+use ratatui::{widgets::List as RList};
 use linked_hash_map::LinkedHashMap;
 
 type Err = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Err>;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct ListItem {
     data: LinkedHashMap<String, String>
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct List {
     items: Vec<ListItem>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct DisplayItem {
+    title: String,
+    description: String,
+}
+
+#[derive(Debug, Default)]
+struct StatefulList {
+    state: ListState,
+    items: Vec<DisplayItem>,
+    last_selected: Option<usize>,
+}
+
+impl StatefulList {
+    fn with_items(items: Vec<DisplayItem>) -> StatefulList {
+        StatefulList {
+            state: ListState::default(),
+            items: items,
+            last_selected: None,
+        }
+    }
 }
 
 #[derive(Debug, Default)]
 struct App {
   should_quit: bool,
   lists: Vec<List>,
+  display_items: StatefulList,
 }
 
 impl App {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new() -> App {
+        App {
+            should_quit: false,
+            lists: Vec::new(),
+            display_items: StatefulList::with_items(Vec::new()),
+        }
     }
 
     pub fn quit(&mut self) {
@@ -63,9 +92,12 @@ impl App {
                     panic!("JSON item data is not an object");
                 };
 
-
                 for (serde_key, serde_value) in data_object.iter() {
-                    list_item.data.insert(serde_key.to_string(), serde_value.to_string());
+                    let serde_value = serde_value.as_str().expect("Failed to convert to str");
+                    let serde_value = serde_value.trim_matches('"');
+                    let serde_value = serde_value.to_string();
+
+                    list_item.data.insert(serde_key.to_string(), serde_value);
                 }
 
                 list.items.push(list_item);
@@ -74,6 +106,24 @@ impl App {
             self.lists.push(list);
         }
 
+        self.generate_display_items();
+    }
+
+    fn generate_display_items(&mut self) {
+        if self.lists.len() < 1 {
+            panic!("We do not have any lists");
+        }
+
+        let first_list = &self.lists[0];
+
+        let display_items: Vec<DisplayItem> = first_list.items.iter().map(|item| {
+            DisplayItem {
+                title: item.data.get("title").expect("Failed to get title").to_string(),
+                description: "".to_string(),
+            }
+        }).collect();
+
+        self.display_items = StatefulList::with_items(display_items);
     }
 }
 
@@ -94,7 +144,7 @@ fn run(json: Value) -> Result<()> {
 
     loop {
         t.draw(|f| {
-            ui(&app, f);
+            ui(&mut app, f);
         });
 
         update(&mut app)?;
@@ -134,7 +184,7 @@ fn update(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-fn ui(app: &App, frame: &mut Frame) {
+fn ui(app: &mut App, frame: &mut Frame) {
     //let main_layout = Layout::new(
     //    Direction::Vertical,
     //    [
@@ -153,13 +203,31 @@ fn ui(app: &App, frame: &mut Frame) {
 
     let vertical_scroll = 0;
 
-    let items: Vec<Line> = app.lists[0].items.iter().map(|item| {
-        Line::from(item.data.get("title").expect("Failed to get title").as_str())
+    let items: Vec<Line> = app.lists[0].items.iter().flat_map(|item| {
+        [
+            Line::from(item.data.get("title").expect("Failed to get title").as_str()),
+        ]
     }).collect();
 
-    let paragraph = Paragraph::new(items.clone())
-        .scroll((vertical_scroll as u16, 0))
-        .block(Block::new().borders(Borders::RIGHT)); // to show a background for the scrollbar
+
+
+    let mut state = ListState::default();
+    let list = RList::new(items.clone())
+        .block(Block::default().title("List").borders(Borders::ALL))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+        .highlight_symbol(">>")
+        .repeat_highlight_symbol(true)
+        .direction(ListDirection::TopToBottom);
+
+
+
+    //let paragraph = Paragraph::new(items.clone())
+    //    .scroll((vertical_scroll as u16, 0))
+    //    .block(Block::new().borders(Borders::RIGHT));
+
+
+
 
     let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
         .begin_symbol(Some("↑"))
@@ -167,14 +235,16 @@ fn ui(app: &App, frame: &mut Frame) {
 
     let mut scrollbar_state = ScrollbarState::new(items.len()).position(vertical_scroll);
 
+
+
     let area = frame.size();
-    // Note we render the paragraph
-    frame.render_widget(paragraph, area);
-    // and the scrollbar, those are separate widgets
+
+
+    frame.render_stateful_widget(list, area, &mut app.display_items.state);
+
     frame.render_stateful_widget(
         scrollbar,
         area.inner(&Margin {
-            // using an inner vertical margin of 1 unit makes the scrollbar inside the block
             vertical: 1,
             horizontal: 0,
         }),
