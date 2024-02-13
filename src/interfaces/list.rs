@@ -9,6 +9,7 @@ use crossterm::{
 };
 use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
+use ratatui::{widgets::ListItem as RListItem};
 use linked_hash_map::LinkedHashMap;
 
 type Err = Box<dyn std::error::Error>;
@@ -119,11 +120,47 @@ impl App {
         let display_items: Vec<DisplayItem> = first_list.items.iter().map(|item| {
             DisplayItem {
                 title: item.data.get("title").expect("Failed to get title").to_string(),
-                description: "".to_string(),
+                description: "test description".to_string(),
             }
         }).collect();
 
         self.display_items = StatefulList::with_items(display_items);
+    }
+}
+
+impl Widget for &mut App {
+
+    fn render(self, area: Rect, buf: &mut Buffer) {
+
+
+        self.render_list(area, buf);
+        
+    }
+}
+
+impl App {
+
+    fn render_list(&mut self, area: Rect, buf: &mut Buffer) {
+
+        let items: Vec<RListItem> = self
+            .display_items
+            .items
+            .iter()
+            .map(|item| {
+                RListItem::new(Line::from(format!("{}", item.title)))
+            })
+            .collect();
+
+        let mut state = ListState::default();
+        let list = RList::new(items.clone())
+            .block(Block::default().title("List").borders(Borders::ALL))
+            .style(Style::default().fg(Color::White))
+            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_symbol(">>")
+            .repeat_highlight_symbol(true)
+            .direction(ListDirection::TopToBottom);
+
+        StatefulWidget::render(list, area, buf, &mut self.display_items.state);
     }
 }
 
@@ -144,7 +181,8 @@ fn run(json: Value) -> Result<()> {
 
     loop {
         t.draw(|f| {
-            ui(&mut app, f);
+            f.render_widget(&mut app, f.size());
+            //ui(&mut app, f);
         });
 
         update(&mut app)?;
@@ -185,62 +223,23 @@ fn update(app: &mut App) -> Result<()> {
 }
 
 fn ui(app: &mut App, frame: &mut Frame) {
-    //let main_layout = Layout::new(
-    //    Direction::Vertical,
-    //    [
-    //        Constraint::Length(4),
-    //        Constraint::Min(0),
-    //    ],
-    //)
-    //.split(frame.size());
-
-    //frame.render_widget(
-    //    Block::new().borders(Borders::TOP).title("Document"),
-    //    main_layout[0],
-    //);
-
-
-
-    let vertical_scroll = 0;
-
-    let items: Vec<Line> = app.lists[0].items.iter().flat_map(|item| {
-        [
-            Line::from(item.data.get("title").expect("Failed to get title").as_str()),
-        ]
-    }).collect();
-
-
-
-    let mut state = ListState::default();
-    let list = RList::new(items.clone())
-        .block(Block::default().title("List").borders(Borders::ALL))
-        .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        .highlight_symbol(">>")
-        .repeat_highlight_symbol(true)
-        .direction(ListDirection::TopToBottom);
-
-
-
-    //let paragraph = Paragraph::new(items.clone())
-    //    .scroll((vertical_scroll as u16, 0))
-    //    .block(Block::new().borders(Borders::RIGHT));
-
-
-
-
-    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-        .begin_symbol(Some("↑"))
-        .end_symbol(Some("↓"));
-
-    let mut scrollbar_state = ScrollbarState::new(items.len()).position(vertical_scroll);
-
 
 
     let area = frame.size();
 
 
-    frame.render_stateful_widget(list, area, &mut app.display_items.state);
+
+
+
+
+
+    let vertical_scroll = 0;
+
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(Some("↑"))
+        .end_symbol(Some("↓"));
+
+    let mut scrollbar_state = ScrollbarState::new(app.display_items.items.len()).position(vertical_scroll);
 
     frame.render_stateful_widget(
         scrollbar,
@@ -251,25 +250,4 @@ fn ui(app: &mut App, frame: &mut Frame) {
         &mut scrollbar_state,
     );
 
-
-
-  //  frame.render_widget(
-  //      Paragraph::new(format!(
-  //          "
-  //          {:?}
-  //          ",
-  //          app.lists
-  //        ))
-  //        .block(
-  //          Block::default()
-  //            .title("Lists")
-  //            .title_alignment(Alignment::Center)
-  //            .borders(Borders::ALL)
-  //            .border_type(BorderType::Rounded),
-  //        )
-  //        .style(Style::default().fg(Color::Yellow))
-  //        .wrap(Wrap { trim: true })
-  //        .alignment(Alignment::Center),
-  //      frame.size()
-  //    );
 }
