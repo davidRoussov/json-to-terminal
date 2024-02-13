@@ -82,6 +82,8 @@ impl StatefulList {
 struct App {
   should_quit: bool,
   focus_item: bool,
+  focus_chat: bool,
+  focus_url: bool,
   lists: Vec<List>,
   display_items: StatefulList,
 }
@@ -91,6 +93,8 @@ impl App {
         App {
             should_quit: false,
             focus_item: false,
+            focus_chat: true,
+            focus_url: false,
             lists: Vec::new(),
             display_items: StatefulList::with_items(Vec::new()),
         }
@@ -173,7 +177,7 @@ impl Widget for &mut App {
         let vertical = Layout::vertical([
             Constraint::Length(4),
             Constraint::Min(0),
-            Constraint::Length(10),
+            Constraint::Length(5),
         ]);
         let [header_area, rest_area, details_area] = vertical.areas(area);
 
@@ -222,12 +226,19 @@ impl App {
 
         if let Some(selected_item) = selected_item {
             let line1 = Line::from(selected_item.description);
-            let line2 = Line::from(
-                format!("Chat: {}\n", selected_item.chat),
+            let mut line2 = Line::from(format!("Chat: {}", selected_item.chat));
+            let mut line3 = Line::from(
+                selected_item.url.clone(),
             );
-            let line3 = Line::from(
-                selected_item.url,
-            );
+
+            if self.focus_item {
+                if self.focus_chat {
+                    line2 = Line::from(format!("Chat: {}", selected_item.chat).green().bold());
+                }
+                if self.focus_url {
+                    line3 = Line::from(format!("{}", selected_item.url).green().bold());
+                }
+            }
 
             let text = vec![
                 line1,
@@ -290,17 +301,51 @@ fn update(app: &mut App) -> Result<()> {
             if key.kind == event::KeyEventKind::Press {
                 match key.code {
                     Char('q') => app.should_quit = true,
-                    Char('j') => app.display_items.next(),
-                    Char('k') => app.display_items.previous(),
+                    Char('j') => {
+                        if app.focus_item {
+
+                            if app.focus_chat {
+                                app.focus_chat = false;
+                                app.focus_url = true;
+                            } else if app.focus_url {
+                                app.focus_chat = true;
+                                app.focus_url = false;
+                            }
+
+                        } else {
+                            app.display_items.next();
+                        }
+                    }
+                    Char('k') => {
+                        if app.focus_item {
+
+
+                            if app.focus_chat {
+                                app.focus_chat = false;
+                                app.focus_url = true;
+                            } else if app.focus_url {
+                                app.focus_chat = true;
+                                app.focus_url = false;
+                            }
+
+
+
+                        } else {
+                            app.display_items.previous();
+                        }
+                    }
                     KeyCode::Enter => {
                         if app.focus_item {
 
                         } else {
                             app.focus_item = true;
+                            app.focus_chat = true;
                         }
                     },
                     KeyCode::Esc => {
                         app.focus_item = false;
+                        app.focus_chat = false;
+                        app.focus_url = false;
                     },
                     _ => {},
                 }
