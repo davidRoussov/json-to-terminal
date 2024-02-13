@@ -2,7 +2,7 @@ use std::io::{self, stdout};
 
 use serde_json::Value;
 use crossterm::{
-    event::{self, Event, KeyCode::Char},
+    event::{self, Event, KeyCode::Char, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
@@ -81,6 +81,7 @@ impl StatefulList {
 #[derive(Debug, Default)]
 struct App {
   should_quit: bool,
+  focus_item: bool,
   lists: Vec<List>,
   display_items: StatefulList,
 }
@@ -89,6 +90,7 @@ impl App {
     pub fn new() -> App {
         App {
             should_quit: false,
+            focus_item: false,
             lists: Vec::new(),
             display_items: StatefulList::with_items(Vec::new()),
         }
@@ -212,15 +214,31 @@ impl App {
 
     fn render_list_item(&mut self, area: Rect, buf: &mut Buffer) {
 
-        let details = if let Some(i) = self.display_items.state.selected() {
-            self.display_items.items[i].description.clone()
+        let selected_item: Option<DisplayItem> = if let Some(i) = self.display_items.state.selected() {
+            Some(self.display_items.items[i].clone())
         } else {
-            "".to_string()
+            None
         };
 
-        Paragraph::new(details)
-            .block(Block::default().borders(Borders::ALL).title("Details"))
-            .render(area, buf);
+        if let Some(selected_item) = selected_item {
+            let line1 = Line::from(selected_item.description);
+            let line2 = Line::from(
+                format!("Chat: {}\n", selected_item.chat),
+            );
+            let line3 = Line::from(
+                selected_item.url,
+            );
+
+            let text = vec![
+                line1,
+                line2,
+                line3
+            ];
+
+            Paragraph::new(text)
+                .block(Block::default().borders(Borders::ALL).title("Details"))
+                .render(area, buf);
+        }
     }
 }
 
@@ -274,6 +292,16 @@ fn update(app: &mut App) -> Result<()> {
                     Char('q') => app.should_quit = true,
                     Char('j') => app.display_items.next(),
                     Char('k') => app.display_items.previous(),
+                    KeyCode::Enter => {
+                        if app.focus_item {
+
+                        } else {
+                            app.focus_item = true;
+                        }
+                    },
+                    KeyCode::Esc => {
+                        app.focus_item = false;
+                    },
                     _ => {},
                 }
             }
