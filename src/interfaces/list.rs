@@ -46,6 +46,34 @@ impl StatefulList {
             last_selected: None,
         }
     }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
 }
 
 #[derive(Debug, Default)]
@@ -182,7 +210,6 @@ fn run(json: Value) -> Result<()> {
     loop {
         t.draw(|f| {
             f.render_widget(&mut app, f.size());
-            //ui(&mut app, f);
         });
 
         update(&mut app)?;
@@ -213,6 +240,8 @@ fn update(app: &mut App) -> Result<()> {
             if key.kind == event::KeyEventKind::Press {
                 match key.code {
                     Char('q') => app.should_quit = true,
+                    Char('j') => app.display_items.next(),
+                    Char('k') => app.display_items.previous(),
                     _ => {},
                 }
             }
@@ -220,34 +249,4 @@ fn update(app: &mut App) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn ui(app: &mut App, frame: &mut Frame) {
-
-
-    let area = frame.size();
-
-
-
-
-
-
-
-    let vertical_scroll = 0;
-
-    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-        .begin_symbol(Some("↑"))
-        .end_symbol(Some("↓"));
-
-    let mut scrollbar_state = ScrollbarState::new(app.display_items.items.len()).position(vertical_scroll);
-
-    frame.render_stateful_widget(
-        scrollbar,
-        area.inner(&Margin {
-            vertical: 1,
-            horizontal: 0,
-        }),
-        &mut scrollbar_state,
-    );
-
 }
