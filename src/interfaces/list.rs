@@ -29,6 +29,8 @@ struct List {
 struct DisplayItem {
     title: String,
     description: String,
+    url: String,
+    chat: String,
 }
 
 #[derive(Debug, Default)]
@@ -148,7 +150,13 @@ impl App {
         let display_items: Vec<DisplayItem> = first_list.items.iter().map(|item| {
             DisplayItem {
                 title: item.data.get("title").expect("Failed to get title").to_string(),
-                description: "test description".to_string(),
+                description: format!(
+                    "user: {} comments: {}",
+                    item.data.get("user").expect("Failed to get user").to_string(),
+                    item.data.get("comments").expect("Failed to get comments").to_string()
+                ),
+                url: item.data.get("url").expect("Failed to get url").to_string(),
+                chat: item.data.get("_chat").expect("Failed to get _chat").to_string(),
             }
         }).collect();
 
@@ -160,16 +168,27 @@ impl Widget for &mut App {
 
     fn render(self, area: Rect, buf: &mut Buffer) {
 
+        let vertical = Layout::vertical([
+            Constraint::Length(4),
+            Constraint::Min(0),
+            Constraint::Length(10),
+        ]);
+        let [header_area, rest_area, details_area] = vertical.areas(area);
 
-        self.render_list(area, buf);
-        
+        self.render_document_header(header_area, buf);
+        self.render_list(rest_area, buf);
+        self.render_list_item(details_area, buf);
     }
 }
 
 impl App {
+    fn render_document_header(&mut self, area: Rect, buf: &mut Buffer) {
+        Paragraph::new("Placeholder document title")
+            .block(Block::default().borders(Borders::ALL).title("Document"))
+            .render(area, buf);
+    }
 
     fn render_list(&mut self, area: Rect, buf: &mut Buffer) {
-
         let items: Vec<RListItem> = self
             .display_items
             .items
@@ -189,6 +208,19 @@ impl App {
             .direction(ListDirection::TopToBottom);
 
         StatefulWidget::render(list, area, buf, &mut self.display_items.state);
+    }
+
+    fn render_list_item(&mut self, area: Rect, buf: &mut Buffer) {
+
+        let details = if let Some(i) = self.display_items.state.selected() {
+            self.display_items.items[i].description.clone()
+        } else {
+            "".to_string()
+        };
+
+        Paragraph::new(details)
+            .block(Block::default().borders(Borders::ALL).title("Details"))
+            .render(area, buf);
     }
 }
 
