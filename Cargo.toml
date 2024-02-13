@@ -17,3 +17,4 @@ uuid = {version = "1.7.0", features = ["v4"]}
 linked-hash-map = "0.5.6"
 ratatui = "0.26.0"
 color-eyre = "0.6.2"
+webbrowser = "0.8.12"

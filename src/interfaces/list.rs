@@ -11,6 +11,7 @@ use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
 use linked_hash_map::LinkedHashMap;
+use webbrowser;
 
 type Err = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Err>;
@@ -337,6 +338,19 @@ fn update(app: &mut App) -> Result<()> {
                     KeyCode::Enter => {
                         if app.focus_item {
 
+                            if app.focus_url {
+
+                                let selected_item: Option<DisplayItem> = if let Some(i) = app.display_items.state.selected() {
+                                    Some(app.display_items.items[i].clone())
+                                } else {
+                                    None
+                                };
+
+                                if let Some(selected_item) = selected_item {
+                                    open_url_default_browser(selected_item.url);
+                                }
+                            }
+
                         } else {
                             app.focus_item = true;
                             app.focus_chat = true;
@@ -354,4 +368,8 @@ fn update(app: &mut App) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn open_url_default_browser(url: String) {
+    let _ = webbrowser::open(&url);
 }
