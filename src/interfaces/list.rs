@@ -13,6 +13,8 @@ use ratatui::{widgets::ListItem as RListItem};
 use linked_hash_map::LinkedHashMap;
 use webbrowser;
 
+use crate::models;
+
 type Err = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Err>;
 
@@ -82,6 +84,7 @@ impl StatefulList {
 #[derive(Debug, Default)]
 struct App {
   should_quit: bool,
+  should_open_chat: bool,
   focus_item: bool,
   focus_chat: bool,
   focus_url: bool,
@@ -93,6 +96,7 @@ impl App {
     pub fn new() -> App {
         App {
             should_quit: false,
+            should_open_chat: false,
             focus_item: false,
             focus_chat: true,
             focus_url: false,
@@ -254,16 +258,23 @@ impl App {
     }
 }
 
-pub fn start_list_interface(json: Value) -> Result<()> {
+pub fn start_list_interface(json: Value) -> Result<Option<models::session::SessionResult>> {
     log::trace!("In start_list_interface");
     startup()?;
-    let status = run(json.clone());
+    let result = run(json.clone());
     shutdown()?;
-    status?;
-    Ok(())
+
+    match result {
+        Ok(result) => {
+            return Ok(result);
+        }
+        Err(_) => {
+            return Err("Error".into());
+        }
+    }
 }
 
-fn run(json: Value) -> Result<()> {
+fn run(json: Value) -> Result<Option<models::session::SessionResult>> {
     let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
 
     let mut app = App::default();
@@ -281,7 +292,27 @@ fn run(json: Value) -> Result<()> {
         }
     }
 
-    Ok(())
+    if app.should_open_chat {
+
+        let selected_item: Option<DisplayItem> = if let Some(i) = app.display_items.state.selected() {
+            Some(app.display_items.items[i].clone())
+        } else {
+            None
+        };
+
+        if let Some(selected_item) = selected_item {
+            let chat = selected_item.chat;
+
+            let session_result = models::session::SessionResult {
+                url: chat,
+                content_type: "chat".to_string(),
+            };
+
+            return Ok(Some(session_result));
+        }
+    }
+
+    Ok(None)
 }
 
 fn startup() -> Result<()> {
@@ -351,6 +382,13 @@ fn update(app: &mut App) -> Result<()> {
                                 }
                             }
 
+                            if app.focus_chat {
+
+                                app.should_open_chat = true;
+                                app.should_quit = true;
+
+                            }
+
                         } else {
                             app.focus_item = true;
                             app.focus_chat = true;
@@ -367,6 +405,8 @@ fn update(app: &mut App) -> Result<()> {
 
         }
     }
+
+
     Ok(())
 }
 

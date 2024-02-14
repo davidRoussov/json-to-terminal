@@ -16,6 +16,9 @@ use atty::Stream;
 mod interfaces {
     pub mod list;
 }
+mod models {
+    pub mod session;
+}
 
 fn get_json_from_file(file_name: &str) -> String {
     let mut file = File::open(file_name).unwrap_or_else(|err| {
@@ -89,7 +92,18 @@ fn main() -> io::Result<()> {
         log::debug!("data_type: {}", data_type);
 
         match data_type {
-            "list" => interfaces::list::start_list_interface(json).expect("Could not start list interface"),
+            "list" => {
+                match interfaces::list::start_list_interface(json) {
+                    Ok(session_result) => {
+
+
+                    }
+                    Err(_) => {
+                        log::error!("List session ended with error");
+                    }
+                }
+
+            },
             _ => log::error!("Unexpected data type: {}", data_type),
         }
     } else {
