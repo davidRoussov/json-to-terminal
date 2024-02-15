@@ -5,7 +5,6 @@ use crossterm::{
     event::{self, Event, KeyCode::Char, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
@@ -258,7 +257,7 @@ impl App {
     }
 }
 
-pub fn start_list_interface(json: Value) -> Result<Option<models::session::SessionResult>> {
+pub fn start_list_interface(json: Value) -> Result<Option<models::session::Session>> {
     log::trace!("In start_list_interface");
     startup()?;
     let result = run(json.clone());
@@ -274,7 +273,7 @@ pub fn start_list_interface(json: Value) -> Result<Option<models::session::Sessi
     }
 }
 
-fn run(json: Value) -> Result<Option<models::session::SessionResult>> {
+fn run(json: Value) -> Result<Option<models::session::Session>> {
     let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
 
     let mut app = App::default();
@@ -303,7 +302,7 @@ fn run(json: Value) -> Result<Option<models::session::SessionResult>> {
         if let Some(selected_item) = selected_item {
             let chat = selected_item.chat;
 
-            let session_result = models::session::SessionResult {
+            let session_result = models::session::Session {
                 url: chat,
                 content_type: "chat".to_string(),
             };

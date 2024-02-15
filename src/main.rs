@@ -45,6 +45,38 @@ fn load_stdin() -> io::Result<String> {
     return Ok(buffer);
 }
 
+fn get_json(session: &models::session::Session, json: Option<Value>) -> Value {
+    log::trace!("In get_json");
+
+    if let Some(json) = json {
+        return json;
+    } else {
+        panic!("Get json unimplemented");
+    }
+}
+
+fn start_session(session: &models::session::Session, json: Option<Value>) {
+    log::trace!("In start_session");
+
+    let json = get_json(session, json);
+
+    match session.content_type.as_str() {
+        "list" => {
+            match interfaces::list::start_list_interface(json) {
+                Ok(session_result) => {
+                    if let Some(session_result) = session_result {
+                        start_session(&session_result, None);
+                    }
+                }
+                Err(_) => {
+                    log::error!("List session ended with error");
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
 fn main() -> io::Result<()> {
     log::trace!("In main");
 
@@ -88,24 +120,16 @@ fn main() -> io::Result<()> {
 
     let json: Value = serde_json::from_str(&json_string).expect("Failed to parse JSON");
 
+    let mut session = models::session::Session {
+        url: "".to_string(),
+        content_type: "".to_string(),
+    };
+
     if let Some(data_type) = matches.value_of("type") {
         log::debug!("data_type: {}", data_type);
 
-        match data_type {
-            "list" => {
-                match interfaces::list::start_list_interface(json) {
-                    Ok(session_result) => {
-
-
-                    }
-                    Err(_) => {
-                        log::error!("List session ended with error");
-                    }
-                }
-
-            },
-            _ => log::error!("Unexpected data type: {}", data_type),
-        }
+        session.content_type = data_type.to_string();
+        start_session(&session, Some(json));
     } else {
         log::info!("Data type not provided, aborting...");
     }
