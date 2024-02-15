@@ -3,6 +3,8 @@ extern crate serde_json;
 extern crate simple_logging;
 extern crate log;
 
+use async_recursion::async_recursion;
+use tokio::runtime::Runtime;
 use std::io::{self, Write};
 use std::process;
 use std::env;
@@ -19,6 +21,7 @@ mod interfaces {
 mod models {
     pub mod session;
 }
+mod utilities;
 
 fn get_json_from_file(file_name: &str) -> String {
     let mut file = File::open(file_name).unwrap_or_else(|err| {
@@ -45,27 +48,31 @@ fn load_stdin() -> io::Result<String> {
     return Ok(buffer);
 }
 
-fn get_json(session: &models::session::Session, json: Option<Value>) -> Value {
+async fn get_json(session: &models::session::Session, json: Option<Value>) -> Value {
     log::trace!("In get_json");
 
     if let Some(json) = json {
         return json;
     } else {
+        let document = utilities::get_document(session.url.clone()).await.unwrap();
+        println!("document: {}", document);
+
         panic!("Get json unimplemented");
     }
 }
 
-fn start_session(session: &models::session::Session, json: Option<Value>) {
+#[async_recursion::async_recursion(?Send)]
+async fn start_session(session: &models::session::Session, json: Option<Value>) {
     log::trace!("In start_session");
 
-    let json = get_json(session, json);
+    let json = get_json(session, json).await;
 
     match session.content_type.as_str() {
         "list" => {
             match interfaces::list::start_list_interface(json) {
                 Ok(session_result) => {
                     if let Some(session_result) = session_result {
-                        start_session(&session_result, None);
+                        start_session(&session_result, None).await;
                     }
                 }
                 Err(_) => {
@@ -125,14 +132,18 @@ fn main() -> io::Result<()> {
         content_type: "".to_string(),
     };
 
-    if let Some(data_type) = matches.value_of("type") {
-        log::debug!("data_type: {}", data_type);
+    let rt = Runtime::new().unwrap();
 
-        session.content_type = data_type.to_string();
-        start_session(&session, Some(json));
-    } else {
-        log::info!("Data type not provided, aborting...");
-    }
+    rt.block_on(async {
+        if let Some(data_type) = matches.value_of("type") {
+            log::debug!("data_type: {}", data_type);
+
+            session.content_type = data_type.to_string();
+            start_session(&session, Some(json)).await;
+        } else {
+            log::info!("Data type not provided, aborting...");
+        }
+    });
 
     Ok(())
 }
