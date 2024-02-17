@@ -16,6 +16,7 @@ pub enum Errors {
 
 pub fn json_to_terminal(json_string: String, document_type: &str) -> Result<Option<models::session::Session>, Errors> {
     log::trace!("In json_to_terminal");
+    log::debug!("json_string: {:?}", json_string);
 
     let json: Value = serde_json::from_str(&json_string).expect("Failed to parse JSON");
 

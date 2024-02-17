@@ -118,7 +118,11 @@ impl App {
                 items: Vec::new(),
             };
 
-            let Some(json_list_items) = json_list["items"].as_array() else {
+            let Some(json_list_list) = json_list["List"].as_object() else {
+                panic!("JSON list does not contain List top level key");
+            };
+
+            let Some(json_list_items) = json_list_list["items"].as_array() else {
                 panic!("JSON list items is not an array");
             };
 
