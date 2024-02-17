@@ -941,27 +941,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2ff9a1f06a88b01621b7ae906ef0211290d1c8a168a15542486a8f61c0833b9"
 
 [[package]]
-name = "reader"
-version = "0.1.0"
-dependencies = [
- "async-recursion",
- "atty",
- "clap",
- "color-eyre",
- "crossterm 0.26.1",
- "linked-hash-map",
- "log",
- "ratatui",
- "reqwest",
- "serde",
- "serde_json",
- "simple-logging",
- "tokio",
- "uuid",
- "webbrowser",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1450,6 +1429,27 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "tooey"
+version = "0.1.0"
+dependencies = [
+ "async-recursion",
+ "atty",
+ "clap",
+ "color-eyre",
+ "crossterm 0.26.1",
+ "linked-hash-map",
+ "log",
+ "ratatui",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "simple-logging",
+ "tokio",
+ "uuid",
+ "webbrowser",
 ]
 
 [[package]]

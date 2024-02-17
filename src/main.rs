@@ -1,5 +1,3 @@
-extern crate serde;
-extern crate serde_json;
 extern crate simple_logging;
 extern crate log;
 
@@ -10,18 +8,12 @@ use std::process;
 use std::env;
 use std::io::{Read};
 use std::fs::File;
-use serde_json::Value;
 use log::{LevelFilter};
 use clap::{Arg, App};
 use atty::Stream;
 
-mod interfaces {
-    pub mod list;
-}
-mod models {
-    pub mod session;
-}
-mod utilities;
+pub mod interfaces;
+pub mod models;
 
 fn get_json_from_file(file_name: &str) -> String {
     let mut file = File::open(file_name).unwrap_or_else(|err| {
@@ -48,44 +40,8 @@ fn load_stdin() -> io::Result<String> {
     return Ok(buffer);
 }
 
-async fn get_json(session: &models::session::Session, json: Option<Value>) -> Value {
-    log::trace!("In get_json");
-
-    if let Some(json) = json {
-        return json;
-    } else {
-        let document = utilities::get_document(session.url.clone()).await.unwrap();
-        println!("document: {}", document);
-
-        panic!("Get json unimplemented");
-    }
-}
-
-#[async_recursion::async_recursion(?Send)]
-async fn start_session(session: &models::session::Session, json: Option<Value>) {
-    log::trace!("In start_session");
-
-    let json = get_json(session, json).await;
-
-    match session.content_type.as_str() {
-        "list" => {
-            match interfaces::list::start_list_interface(json) {
-                Ok(session_result) => {
-                    if let Some(session_result) = session_result {
-                        start_session(&session_result, None).await;
-                    }
-                }
-                Err(_) => {
-                    log::error!("List session ended with error");
-                }
-            }
-        }
-        _ => {}
-    }
-}
-
 fn main() -> io::Result<()> {
-    log::trace!("In main");
+    let _ = simple_logging::log_to_file("debug.log", LevelFilter::Trace);
 
     let mut json_string = String::new();
 
@@ -111,6 +67,8 @@ fn main() -> io::Result<()> {
              .help("Provide file as document for processing"))
         .get_matches();
 
+    let document_type = matches.value_of("type").expect("Did not receive document type");
+
     if let Some(file_name) = matches.value_of("file") {
         log::debug!("file_name: {}", file_name);
 
@@ -125,25 +83,18 @@ fn main() -> io::Result<()> {
     }
     log::debug!("{}", json_string);
 
-    let json: Value = serde_json::from_str(&json_string).expect("Failed to parse JSON");
+    let result = tooey::json_to_terminal(json_string, document_type);
 
-    let mut session = models::session::Session {
-        url: "".to_string(),
-        content_type: "".to_string(),
-    };
-
-    let rt = Runtime::new().unwrap();
-
-    rt.block_on(async {
-        if let Some(data_type) = matches.value_of("type") {
-            log::debug!("data_type: {}", data_type);
-
-            session.content_type = data_type.to_string();
-            start_session(&session, Some(json)).await;
-        } else {
-            log::info!("Data type not provided, aborting...");
+    match result {
+        Ok(session_result) => {
+            if let Some(session_result) = session_result {
+                println!("{:?}", session_result);
+            } 
         }
-    });
+        Err(err) => {
+            log::error!("session ended in error: {:?}", err);
+        }
+    }
 
     Ok(())
 }
