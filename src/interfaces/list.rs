@@ -30,7 +30,6 @@ struct DisplayItem {
     title: String,
     description: String,
     url: String,
-    chat: String,
 }
 
 #[derive(Debug, Default)]
@@ -81,10 +80,7 @@ impl StatefulList {
 #[derive(Debug, Default)]
 struct App {
   should_quit: bool,
-  should_open_chat: bool,
   focus_item: bool,
-  focus_chat: bool,
-  focus_url: bool,
   lists: Vec<List>,
   display_items: StatefulList,
 }
@@ -93,10 +89,7 @@ impl App {
     pub fn new() -> App {
         App {
             should_quit: false,
-            should_open_chat: false,
             focus_item: false,
-            focus_chat: true,
-            focus_url: false,
             lists: Vec::new(),
             display_items: StatefulList::with_items(Vec::new()),
         }
@@ -162,13 +155,8 @@ impl App {
         let display_items: Vec<DisplayItem> = first_list.items.iter().map(|item| {
             DisplayItem {
                 title: item.data.get("title").expect("Failed to get title").to_string(),
-                description: format!(
-                    "user: {} comments: {}",
-                    item.data.get("user").expect("Failed to get user").to_string(),
-                    item.data.get("comments").expect("Failed to get comments").to_string()
-                ),
+                description: String::new(),
                 url: item.data.get("url").expect("Failed to get url").to_string(),
-                chat: item.data.get("_chat").expect("Failed to get _chat").to_string(),
             }
         }).collect();
 
@@ -232,24 +220,17 @@ impl App {
 
         if let Some(selected_item) = selected_item {
             let line1 = Line::from(selected_item.description);
-            let mut line2 = Line::from(format!("Chat: {}", selected_item.chat));
-            let mut line3 = Line::from(
+            let mut line2 = Line::from(
                 selected_item.url.clone(),
             );
 
             if self.focus_item {
-                if self.focus_chat {
-                    line2 = Line::from(format!("Chat: {}", selected_item.chat).green().bold());
-                }
-                if self.focus_url {
-                    line3 = Line::from(format!("{}", selected_item.url).green().bold());
-                }
+                line2 = Line::from(format!("{}", selected_item.url).green().bold());
             }
 
             let text = vec![
                 line1,
                 line2,
-                line3
             ];
 
             Paragraph::new(text)
@@ -293,26 +274,6 @@ fn run(json: Value) -> Result<Option<models::session::Session>> {
         }
     }
 
-    if app.should_open_chat {
-
-        let selected_item: Option<DisplayItem> = if let Some(i) = app.display_items.state.selected() {
-            Some(app.display_items.items[i].clone())
-        } else {
-            None
-        };
-
-        if let Some(selected_item) = selected_item {
-            let chat = selected_item.chat;
-
-            let session_result = models::session::Session {
-                url: chat,
-                content_type: "chat".to_string(),
-            };
-
-            return Ok(Some(session_result));
-        }
-    }
-
     Ok(None)
 }
 
@@ -335,70 +296,30 @@ fn update(app: &mut App) -> Result<()> {
                 match key.code {
                     Char('q') => app.should_quit = true,
                     Char('j') => {
-                        if app.focus_item {
-
-                            if app.focus_chat {
-                                app.focus_chat = false;
-                                app.focus_url = true;
-                            } else if app.focus_url {
-                                app.focus_chat = true;
-                                app.focus_url = false;
-                            }
-
-                        } else {
-                            app.display_items.next();
-                        }
+                        app.display_items.next();
                     }
                     Char('k') => {
-                        if app.focus_item {
-
-
-                            if app.focus_chat {
-                                app.focus_chat = false;
-                                app.focus_url = true;
-                            } else if app.focus_url {
-                                app.focus_chat = true;
-                                app.focus_url = false;
-                            }
-
-
-
-                        } else {
-                            app.display_items.previous();
-                        }
+                        app.display_items.previous();
                     }
                     KeyCode::Enter => {
                         if app.focus_item {
 
-                            if app.focus_url {
+                            let selected_item: Option<DisplayItem> = if let Some(i) = app.display_items.state.selected() {
+                                Some(app.display_items.items[i].clone())
+                            } else {
+                                None
+                            };
 
-                                let selected_item: Option<DisplayItem> = if let Some(i) = app.display_items.state.selected() {
-                                    Some(app.display_items.items[i].clone())
-                                } else {
-                                    None
-                                };
-
-                                if let Some(selected_item) = selected_item {
-                                    open_url_default_browser(selected_item.url);
-                                }
-                            }
-
-                            if app.focus_chat {
-
-                                app.should_open_chat = true;
-                                app.should_quit = true;
-
+                            if let Some(selected_item) = selected_item {
+                                open_url_default_browser(selected_item.url);
                             }
 
                         } else {
                             app.focus_item = true;
-                            app.focus_chat = true;
                         }
                     },
                     KeyCode::Esc => {
                         app.focus_item = false;
-                        app.focus_chat = false;
-                        app.focus_url = false;
                     },
                     _ => {},
                 }
