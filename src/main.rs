@@ -55,19 +55,12 @@ fn main() -> io::Result<()> {
     }
 
     let matches = App::new("tooey")
-        .arg(Arg::with_name("type")
-             .short('t')
-             .long("type")
-             .value_name("TYPE")
-             .required(true))
         .arg(Arg::with_name("file")
              .short('f')
              .long("file")
              .value_name("FILE")
              .help("Provide file as document for processing"))
         .get_matches();
-
-    let document_type = matches.value_of("type").expect("Did not receive document type");
 
     if let Some(file_name) = matches.value_of("file") {
         log::debug!("file_name: {}", file_name);
@@ -83,7 +76,7 @@ fn main() -> io::Result<()> {
     }
     log::debug!("{}", json_string);
 
-    let result = tooey::json_to_terminal(json_string, document_type);
+    let result = tooey::json_to_terminal(json_string);
 
     match result {
         Ok(session_result) => {
