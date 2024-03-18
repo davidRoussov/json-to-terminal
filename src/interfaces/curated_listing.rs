@@ -61,7 +61,88 @@ impl App {
             .items
             .iter()
             .map(|item| {
-                RListItem::new(Line::from(format!("{}", item.data.title)))
+                let mut lines: Vec<Line> = Vec::new();
+
+                let line_one = Line::from(format!("{}", item.data.title))
+                    .style(Style::new().add_modifier(Modifier::BOLD));
+                let line_two = Line::from(format!("{}", item.data.url))
+                    .style(Style::new().yellow());
+
+                lines.push(line_one);
+                lines.push(line_two);
+               
+                if let Some(chat_url) = &item.data.chat_url {
+                    let span_one = Span::styled(
+                        "chat: ",
+                        Style::new()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
+                    );
+                    let span_two = Span::styled(
+                        format!("{}", chat_url),
+                        Style::new()
+                            .fg(Color::Yellow)
+                    );
+                    let line = Line::from(vec![span_one, span_two]);
+                    lines.push(line);
+                }
+
+                let mut additional_info: Vec<Span> = Vec::new();
+
+                if let Some(points) = &item.data.points {
+                    let span_one = Span::styled(
+                        "points: ",
+                        Style::new()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD)
+                    );
+                    additional_info.push(span_one);
+
+                    let span_two = Span::styled(
+                        format!("{}", points),
+                        Style::new()
+                            .fg(Color::Green)
+                    );
+                    additional_info.push(span_two);
+                }
+
+                if let Some(author) = &item.data.author {
+                    let span_one = Span::styled(
+                        " author: ",
+                        Style::new()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD)
+                    );
+                    additional_info.push(span_one);
+
+                    let span_two = Span::styled(
+                        format!("{}", author),
+                        Style::new()
+                            .fg(Color::Green)
+                    );
+                    additional_info.push(span_two);
+                }
+
+                if let Some(timestamp) = &item.data.timestamp {
+                    let span_one = Span::styled(
+                        " timestamp: ",
+                        Style::new()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD)
+                    );
+                    additional_info.push(span_one);
+
+                    let span_two = Span::styled(
+                        format!("{}", timestamp),
+                        Style::new()
+                            .fg(Color::Green)
+                    );
+                    additional_info.push(span_two);
+                }
+
+                lines.push(Line::from(additional_info));
+                
+                return RListItem::new(lines);
             })
             .collect();
 
