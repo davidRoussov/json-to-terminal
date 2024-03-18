@@ -42,7 +42,6 @@ fn try_deserialize(data: &str) -> Option<DeserializationResult> {
              return Some(DeserializationResult::CuratedListing(curated_listing.clone()));
          }
      }
-     // Add more deserialization attempts here for other structs...
 
      None
  }
