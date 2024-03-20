@@ -25,6 +25,7 @@ struct StatefulList {
 
 struct App {
     should_quit: bool,
+    focus_item: bool,
     curated_listing: Option<pandoculation::CuratedListing>,
     display_items: StatefulList,
 }
@@ -33,6 +34,7 @@ impl App {
     pub fn new() -> App {
         App {
             should_quit: false,
+            focus_item: false,
             curated_listing: None,
             display_items: StatefulList::with_items(Vec::new()),
         }
@@ -61,6 +63,7 @@ impl App {
             .items
             .iter()
             .map(|item| {
+
                 let mut lines: Vec<Line> = Vec::new();
 
                 let line_one = Line::from(format!("{}", item.data.title))
@@ -157,19 +160,132 @@ impl App {
 
         StatefulWidget::render(list, area, buf, &mut self.display_items.state);
     }
+
+    fn render_footer(&mut self, area: Rect, buf: &mut Buffer) {
+        let selected_item: Option<pandoculation::CuratedListingItem> = if let Some(i) = self.display_items.state.selected() {
+            Some(self.display_items.items[i].clone())
+        } else {
+            None
+        };
+
+        if let Some(selected_item) = selected_item {
+            let mut lines: Vec<Line> = Vec::new();
+
+            let line_one = Line::from(format!("{}", selected_item.data.title))
+                .style(Style::new().add_modifier(Modifier::BOLD));
+            let line_two = Line::from(format!("{}", selected_item.data.url))
+                .style(Style::new().yellow());
+
+            lines.push(line_one);
+            lines.push(line_two);
+           
+            if let Some(chat_url) = &selected_item.data.chat_url {
+                let span_one = Span::styled(
+                    "chat: ",
+                    Style::new()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD)
+                );
+                let span_two = Span::styled(
+                    format!("{}", chat_url),
+                    Style::new()
+                        .fg(Color::Yellow)
+                );
+                let line = Line::from(vec![span_one, span_two]);
+                lines.push(line);
+            }
+
+            let mut additional_info: Vec<Span> = Vec::new();
+
+            if let Some(points) = &selected_item.data.points {
+                let span_one = Span::styled(
+                    "points: ",
+                    Style::new()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD)
+                );
+                additional_info.push(span_one);
+
+                let span_two = Span::styled(
+                    format!("{}", points),
+                    Style::new()
+                        .fg(Color::Green)
+                );
+                additional_info.push(span_two);
+            }
+
+            if let Some(author) = &selected_item.data.author {
+                let span_one = Span::styled(
+                    " author: ",
+                    Style::new()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD)
+                );
+                additional_info.push(span_one);
+
+                let span_two = Span::styled(
+                    format!("{}", author),
+                    Style::new()
+                        .fg(Color::Green)
+                );
+                additional_info.push(span_two);
+            }
+
+            if let Some(timestamp) = &selected_item.data.timestamp {
+                let span_one = Span::styled(
+                    " timestamp: ",
+                    Style::new()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD)
+                );
+                additional_info.push(span_one);
+
+                let span_two = Span::styled(
+                    format!("{}", timestamp),
+                    Style::new()
+                        .fg(Color::Green)
+                );
+                additional_info.push(span_two);
+            }
+
+            lines.push(Line::from(additional_info));
+
+
+            let text: Text = Text::from(lines);
+
+            Paragraph::new(text)
+                .block(Block::default().borders(Borders::ALL).title("Details"))
+                .render(area, buf);
+
+        }
+    }
 }
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
+
+        let selected_item: Option<pandoculation::CuratedListingItem> = if let Some(i) = self.display_items.state.selected() {
+            Some(self.display_items.items[i].clone())
+        } else {
+            None
+        };
+        let length_footer_area = if selected_item.is_some() && self.focus_item {
+            10
+        } else {
+            0
+        };
+
         let vertical = Layout::vertical([
             Constraint::Length(4),
             Constraint::Min(0),
+            Constraint::Length(length_footer_area),
         ]);
 
-        let [header_area, body_area] = vertical.areas(area);
+        let [header_area, body_area, footer_area] = vertical.areas(area);
 
         self.render_document_header(header_area, buf);
         self.render_body(body_area, buf);
+        self.render_footer(footer_area, buf);
     }
 }
 
@@ -269,14 +385,24 @@ fn update(app: &mut App) -> Result<()> {
                 match key.code {
                     Char('q') => app.should_quit = true,
                     Char('j') => {
-                        app.display_items.next();
+                        if !app.focus_item {
+                            app.display_items.next();
+                        }
                     }
                     Char('k') => {
-                        app.display_items.previous();
+                        if !app.focus_item {
+                            app.display_items.previous();
+                        }
                     }
                     KeyCode::Enter => {
+                        if app.focus_item {
+
+                        } else {
+                            app.focus_item = true;
+                        }
                     },
                     KeyCode::Esc => {
+                        app.focus_item = false;
                     },
                     _ => {},
                 }
