@@ -62,8 +62,6 @@ impl App {
         }
        
         self.active_item_urls = StatefulList::<String>::with_items(urls.clone());
-
-        log::debug!("self.active_item_urls: {:?}", self.active_item_urls);
     }
 }
 
@@ -190,9 +188,6 @@ impl App {
             })
             .collect();
 
-        //log::debug!("items: {:?}", items);
-        //log::debug!("active_item_urls: {:?}", self.active_item_urls);
-
         let list = RList::new(items.clone())
             .block(Block::default().title("URLs").borders(Borders::ALL))
             .style(Style::default().fg(Color::White))
@@ -205,14 +200,8 @@ impl App {
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-
-        let selected_item: Option<pandoculation::CuratedListingItem> = if let Some(i) = self.display_items.state.selected() {
-            Some(self.display_items.items[i].clone())
-        } else {
-            None
-        };
-        let length_footer_area = if selected_item.is_some() && self.focus_item {
-            10
+        let length_footer_area = if self.focus_item {
+            (self.active_item_urls.items.len() as u16) + 2
         } else {
             0
         };
