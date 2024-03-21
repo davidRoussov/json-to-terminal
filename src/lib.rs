@@ -18,6 +18,7 @@ pub enum Errors {
 
 enum DeserializationResult {
     CuratedListing(pandoculation::CuratedListing),
+    Chat(pandoculation::Chat),
 }
 
 pub fn json_to_terminal(json_string: String) -> Result<Option<models::session::Session>, Errors> {
@@ -31,15 +32,26 @@ pub fn json_to_terminal(json_string: String) -> Result<Option<models::session::S
                  Errors::UnexpectedError
              })
          },
+         Some(DeserializationResult::Chat(ref chat)) => {
+             interfaces::chat::start(chat).map_err(|e| {
+                 log::error!("Error: {:?}", e);
+                 Errors::UnexpectedError
+             })
+         },
          None => Err(Errors::UnexpectedDocumentType)
     }
 }
 
 fn try_deserialize(data: &str) -> Option<DeserializationResult> {
      if let Ok(listing) = serde_json::from_str::<HashMap<String, pandoculation::CuratedListing>>(data) {
-
          if let Some(curated_listing) = listing.get("CuratedListing") {
              return Some(DeserializationResult::CuratedListing(curated_listing.clone()));
+         }
+     }
+
+     if let Ok(chat) = serde_json::from_str::<HashMap<String, pandoculation::Chat>>(data) {
+         if let Some(chat) = chat.get("Chat") {
+             return Some(DeserializationResult::Chat(chat.clone()));
          }
      }
 
