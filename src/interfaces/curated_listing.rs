@@ -29,6 +29,7 @@ struct App {
     curated_listing: Option<pandoculation::CuratedListing>,
     display_items: StatefulList<pandoculation::CuratedListingItem>,
     active_item_urls: StatefulList<String>,
+    session_result: Option<models::session::Session>,
 }
 
 impl App {
@@ -39,6 +40,7 @@ impl App {
             curated_listing: None,
             display_items: StatefulList::<pandoculation::CuratedListingItem>::with_items(Vec::new()),
             active_item_urls: StatefulList::<String>::with_items(Vec::new()),
+            session_result: None,
         }
     }
 
@@ -306,7 +308,11 @@ fn run(curated_listing: pandoculation::CuratedListing) -> Result<Option<models::
         }
     }
 
-    Ok(None)
+    if let Some(session_result) = app.session_result {
+        Ok(Some(session_result))
+    } else {
+        Ok(None)
+    }
 }
 
 fn update(app: &mut App) -> Result<()> {
@@ -340,6 +346,13 @@ fn update(app: &mut App) -> Result<()> {
 
                             if let Some(selected_url) = selected_url {
                                 log::debug!("selected_url: {}", selected_url);
+
+                                let session_result = models::session::Session {
+                                    url: selected_url,
+                                };
+
+                                app.session_result = Some(session_result);
+                                app.should_quit = true;
                             }
 
                         } else {
