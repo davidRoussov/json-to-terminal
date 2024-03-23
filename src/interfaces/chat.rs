@@ -15,9 +15,17 @@ use crate::models;
 type Err = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Err>;
 
+#[derive(Debug, Default)]
+struct StatefulList<T> {
+    state: ListState,
+    items: Vec<T>,
+    last_selected: Option<usize>,
+}
+
 struct App {
     should_quit: bool,
     chat: Option<pandoculation::Chat>,
+    display_items: StatefulList<pandoculation::ChatItem>,
     session_result: Option<models::session::Session>,
 }
 
@@ -27,6 +35,7 @@ impl App {
             should_quit: false,
             chat: None,
             session_result: None,
+            display_items: StatefulList::<pandoculation::ChatItem>::with_items(Vec::new()),
         }
     }
 
@@ -36,12 +45,102 @@ impl App {
 
     pub fn load_chat(&mut self, chat: &pandoculation::Chat) {
         self.chat = Some(chat.clone());
+        self.display_items = StatefulList::<pandoculation::ChatItem>::with_items(chat.items.clone());
+    }
+}
+
+impl App {
+    fn render_document_header(&mut self, area: Rect, buf: &mut Buffer) {
+        Paragraph::new("Placeholder document title")
+            .block(Block::default().borders(Borders::ALL).title("Document"))
+            .render(area, buf);
+    }
+
+    fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
+        let chat = if let Some(chat) = &self.chat {
+            chat
+        } else {
+            return;
+        };
+
+        let vertical_scroll = 0;
+
+        let items: Vec<RListItem> = chat
+            .items
+            .iter()
+            .map(|item| {
+                let mut lines: Vec<Line> = Vec::new();
+
+                lines.push(
+                    Line::from(format!("{}", item.data.text))
+                );
+
+                return RListItem::new(lines);
+            })
+            .collect();
+
+
+        let list = RList::new(items.clone())
+            .block(Block::default().title("List").borders(Borders::ALL))
+            .style(Style::default().fg(Color::White))
+            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_symbol(">>")
+            .repeat_highlight_symbol(true)
+            .direction(ListDirection::TopToBottom);
+
+        StatefulWidget::render(list, area, buf, &mut self.display_items.state);
     }
 }
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let vertical = Layout::vertical([
+            Constraint::Length(4),
+            Constraint::Min(0),
+        ]);
 
+        let [header_area, body_area] = vertical.areas(area);
+
+        self.render_document_header(header_area, buf);
+        self.render_body(body_area, buf);
+    }
+}
+
+impl<T> StatefulList<T> {
+    fn with_items(items: Vec<T>) -> StatefulList<T> {
+        StatefulList {
+            state: ListState::default(),
+            items: items,
+            last_selected: None,
+        }
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
     }
 }
 
