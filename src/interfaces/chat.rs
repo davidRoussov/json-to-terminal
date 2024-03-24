@@ -11,6 +11,7 @@ use linked_hash_map::LinkedHashMap;
 use textwrap;
 use webbrowser;
 use pandoculation;
+use std::collections::HashMap;
 use crate::models;
 
 type Err = Box<dyn std::error::Error>;
@@ -45,8 +46,29 @@ impl App {
     }
 
     pub fn load_chat(&mut self, chat: &pandoculation::Chat) {
+
+        let mut items = chat.clone().items;
+        
+        let mut parent_map: HashMap<Option<String>, Vec<pandoculation::ChatItem>> = HashMap::new();
+        for item in items.iter().cloned() {
+            parent_map.entry(item.data.parent_id.clone()).or_insert_with(Vec::new).push(item);
+        }
+
+        fn build_sorted_list(id: Option<String>, parent_map: &HashMap<Option<String>, Vec<pandoculation::ChatItem>>, sorted_list: &mut Vec<pandoculation::ChatItem>) {
+            if let Some(children) = parent_map.get(&id) {
+                for child in children {
+                    sorted_list.push(child.clone());
+                    build_sorted_list(Some(child.data.id.clone()), parent_map, sorted_list);
+                }
+            }
+        }
+
+        let mut sorted_items = Vec::new();
+        build_sorted_list(None, &parent_map, &mut sorted_items);
+
+
         self.chat = Some(chat.clone());
-        self.display_items = StatefulList::<pandoculation::ChatItem>::with_items(chat.items.clone());
+        self.display_items = StatefulList::<pandoculation::ChatItem>::with_items(sorted_items);
     }
 }
 
@@ -100,10 +122,9 @@ impl App {
 
 
         let list = RList::new(items.clone())
-            .block(Block::default().title("List").borders(Borders::ALL))
+            .block(Block::default().title("Chat").borders(Borders::ALL))
             .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>")
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 
