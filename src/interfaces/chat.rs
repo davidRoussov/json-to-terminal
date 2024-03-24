@@ -8,6 +8,7 @@ use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
 use linked_hash_map::LinkedHashMap;
+use textwrap;
 use webbrowser;
 use pandoculation;
 use crate::models;
@@ -85,9 +86,13 @@ impl App {
                     Line::from(line1_spans)
                 );
 
-                lines.push(
-                    Line::from(format!("{}", item.data.text))
-                );
+                let wrapped_lines = textwrap::wrap(&item.data.text, &textwrap::Options::new(120));
+
+                for wrapped_line in wrapped_lines.iter() {
+                    lines.push(
+                        Line::from(format!("{}", wrapped_line))
+                    );
+                }
 
                 return RListItem::new(lines);
             })
