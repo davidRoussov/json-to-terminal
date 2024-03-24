@@ -71,6 +71,20 @@ impl App {
             .map(|item| {
                 let mut lines: Vec<Line> = Vec::new();
 
+                let mut line1_spans: Vec<Span> = Vec::new();
+
+                let span_one = Span::styled(format!("{}", item.data.author), Style::default().fg(Color::Blue));
+                line1_spans.push(span_one);
+
+                if let Some(timestamp) = &item.data.timestamp {
+                    let span = Span::styled(format!(" {}", timestamp), Style::default().fg(Color::Green));
+                    line1_spans.push(span);
+                }
+
+                lines.push(
+                    Line::from(line1_spans)
+                );
+
                 lines.push(
                     Line::from(format!("{}", item.data.text))
                 );
@@ -206,8 +220,10 @@ fn update(app: &mut App) -> Result<()> {
                 match key.code {
                     Char('q') => app.should_quit = true,
                     Char('j') => {
+                        app.display_items.next();
                     }
                     Char('k') => {
+                        app.display_items.previous();
                     }
                     KeyCode::Enter => {
                     },
