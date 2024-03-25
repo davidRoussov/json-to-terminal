@@ -107,11 +107,15 @@ impl App {
             .items
             .iter()
             .map(|item| {
+
+                let item_height = self.item_height_map.get(&item.data.id).unwrap_or(&0);
+                let whitespace: String = std::iter::repeat(' ').take((*item_height as usize) * 4).collect();
+
                 let mut lines: Vec<Line> = Vec::new();
 
                 let mut line1_spans: Vec<Span> = Vec::new();
 
-                let span_one = Span::styled(format!("{}", item.data.author), Style::default().fg(Color::Blue));
+                let span_one = Span::styled(format!("{}{}", whitespace, item.data.author), Style::default().fg(Color::Blue));
                 line1_spans.push(span_one);
 
                 if let Some(timestamp) = &item.data.timestamp {
@@ -127,7 +131,7 @@ impl App {
 
                 for wrapped_line in wrapped_lines.iter() {
                     lines.push(
-                        Line::from(format!("{}", wrapped_line))
+                        Line::from(format!("{}{}", whitespace, wrapped_line))
                     );
                 }
 
