@@ -29,6 +29,7 @@ struct App {
     chat: Option<pandoculation::Chat>,
     display_items: StatefulList<pandoculation::ChatItem>,
     session_result: Option<models::session::Session>,
+    item_height_map: HashMap<String, u16>,
 }
 
 impl App {
@@ -38,6 +39,7 @@ impl App {
             chat: None,
             session_result: None,
             display_items: StatefulList::<pandoculation::ChatItem>::with_items(Vec::new()),
+            item_height_map: HashMap::new(),
         }
     }
 
@@ -48,27 +50,40 @@ impl App {
     pub fn load_chat(&mut self, chat: &pandoculation::Chat) {
 
         let mut items = chat.clone().items;
-        
+
         let mut parent_map: HashMap<Option<String>, Vec<pandoculation::ChatItem>> = HashMap::new();
         for item in items.iter().cloned() {
             parent_map.entry(item.data.parent_id.clone()).or_insert_with(Vec::new).push(item);
         }
 
-        fn build_sorted_list(id: Option<String>, parent_map: &HashMap<Option<String>, Vec<pandoculation::ChatItem>>, sorted_list: &mut Vec<pandoculation::ChatItem>) {
+        fn build_sorted_list(id: Option<String>, parent_map: &HashMap<Option<String>, Vec<pandoculation::ChatItem>>, sorted_list: &mut Vec<pandoculation::ChatItem>, item_height_map: &mut HashMap<String, u16>) {
             if let Some(children) = parent_map.get(&id) {
                 for child in children {
+
+                    if let Some(ref some_id) = id {
+                        if let Some(h) = item_height_map.get(some_id) {
+                            item_height_map.insert(child.data.id.clone(), h + 1);
+                        }
+                    } else {
+                        item_height_map.insert(child.data.id.clone(), 0);
+                    }
+
+
                     sorted_list.push(child.clone());
-                    build_sorted_list(Some(child.data.id.clone()), parent_map, sorted_list);
+                    build_sorted_list(Some(child.data.id.clone()), parent_map, sorted_list, item_height_map);
                 }
             }
         }
 
+        let mut item_height_map: HashMap<String, u16> = HashMap::new();
         let mut sorted_items = Vec::new();
-        build_sorted_list(None, &parent_map, &mut sorted_items);
+        build_sorted_list(None, &parent_map, &mut sorted_items, &mut item_height_map);
 
+        log::debug!("item_height_map: {:?}", item_height_map);
 
         self.chat = Some(chat.clone());
         self.display_items = StatefulList::<pandoculation::ChatItem>::with_items(sorted_items);
+        self.item_height_map = item_height_map;
     }
 }
 
