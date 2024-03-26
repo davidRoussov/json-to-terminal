@@ -9,7 +9,6 @@ use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
 use linked_hash_map::LinkedHashMap;
 use textwrap;
-use webbrowser;
 use pandoculation;
 use std::collections::HashMap;
 use crate::models;
