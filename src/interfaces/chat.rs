@@ -29,6 +29,7 @@ struct App {
     display_items: StatefulList<pandoculation::ChatItem>,
     session_result: Option<models::session::Session>,
     item_height_map: HashMap<String, u16>,
+    item_collapse_map: HashMap<String, bool>,
 }
 
 impl App {
@@ -39,6 +40,7 @@ impl App {
             session_result: None,
             display_items: StatefulList::<pandoculation::ChatItem>::with_items(Vec::new()),
             item_height_map: HashMap::new(),
+            item_collapse_map: HashMap::new(),
         }
     }
 
@@ -84,6 +86,24 @@ impl App {
         self.display_items = StatefulList::<pandoculation::ChatItem>::with_items(sorted_items);
         self.item_height_map = item_height_map;
     }
+
+    pub fn toggleCollapse(&mut self) {
+        let selected_item: Option<pandoculation::ChatItem> = if let Some(i) = self.display_items.state.selected() {
+            Some(self.display_items.items[i].clone())
+        } else {
+            None
+        };
+
+        if let Some(selected_item) = selected_item {
+            let collapsed: Option<bool> = self.item_collapse_map.get(&selected_item.data.id).copied();
+
+            if let Some(false) | None = collapsed {
+                self.item_collapse_map.insert(selected_item.data.id, true);
+            } else {
+                self.item_collapse_map.insert(selected_item.data.id, false);
+            }
+        }
+    }
 }
 
 impl App {
@@ -126,12 +146,17 @@ impl App {
                     Line::from(line1_spans)
                 );
 
-                let wrapped_lines = textwrap::wrap(&item.data.text, &textwrap::Options::new(120));
 
-                for wrapped_line in wrapped_lines.iter() {
-                    lines.push(
-                        Line::from(format!("{}{}", whitespace, wrapped_line))
-                    );
+                let is_collapsed = self.item_collapse_map.get(&item.data.id);
+
+                if let Some(false) | None = is_collapsed {
+                    let wrapped_lines = textwrap::wrap(&item.data.text, &textwrap::Options::new(120));
+
+                    for wrapped_line in wrapped_lines.iter() {
+                        lines.push(
+                            Line::from(format!("{}{}", whitespace, wrapped_line))
+                        );
+                    }
                 }
 
                 return RListItem::new(lines);
@@ -272,6 +297,9 @@ fn update(app: &mut App) -> Result<()> {
                     KeyCode::Enter => {
                     },
                     KeyCode::Esc => {
+                    },
+                    Char(' ') => {
+                        app.toggleCollapse();
                     },
                     _ => {},
                 }
