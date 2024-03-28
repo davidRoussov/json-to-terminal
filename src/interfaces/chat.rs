@@ -30,6 +30,7 @@ struct App {
     session_result: Option<models::session::Session>,
     item_height_map: HashMap<String, u16>,
     item_collapse_map: HashMap<String, bool>,
+    child_parent_map: HashMap<String, Option<pandoculation::ChatItem>>,
 }
 
 impl App {
@@ -41,6 +42,7 @@ impl App {
             display_items: StatefulList::<pandoculation::ChatItem>::with_items(Vec::new()),
             item_height_map: HashMap::new(),
             item_collapse_map: HashMap::new(),
+            child_parent_map: HashMap::new(),
         }
     }
 
@@ -52,13 +54,13 @@ impl App {
 
         let mut items = chat.clone().items;
 
-        let mut parent_map: HashMap<Option<String>, Vec<pandoculation::ChatItem>> = HashMap::new();
+        let mut parent_children_map: HashMap<Option<String>, Vec<pandoculation::ChatItem>> = HashMap::new();
         for item in items.iter().cloned() {
-            parent_map.entry(item.data.parent_id.clone()).or_insert_with(Vec::new).push(item);
+            parent_children_map.entry(item.data.parent_id.clone()).or_insert_with(Vec::new).push(item);
         }
 
-        fn build_sorted_list(id: Option<String>, parent_map: &HashMap<Option<String>, Vec<pandoculation::ChatItem>>, sorted_list: &mut Vec<pandoculation::ChatItem>, item_height_map: &mut HashMap<String, u16>) {
-            if let Some(children) = parent_map.get(&id) {
+        fn build_sorted_list(id: Option<String>, parent_children_map: &HashMap<Option<String>, Vec<pandoculation::ChatItem>>, sorted_list: &mut Vec<pandoculation::ChatItem>, item_height_map: &mut HashMap<String, u16>) {
+            if let Some(children) = parent_children_map.get(&id) {
                 for child in children {
 
                     if let Some(ref some_id) = id {
@@ -71,20 +73,30 @@ impl App {
 
 
                     sorted_list.push(child.clone());
-                    build_sorted_list(Some(child.data.id.clone()), parent_map, sorted_list, item_height_map);
+                    build_sorted_list(Some(child.data.id.clone()), parent_children_map, sorted_list, item_height_map);
                 }
             }
         }
 
         let mut item_height_map: HashMap<String, u16> = HashMap::new();
         let mut sorted_items = Vec::new();
-        build_sorted_list(None, &parent_map, &mut sorted_items, &mut item_height_map);
+        build_sorted_list(None, &parent_children_map, &mut sorted_items, &mut item_height_map);
 
-        log::debug!("item_height_map: {:?}", item_height_map);
+
+        let mut child_parent_map: HashMap<String, Option<pandoculation::ChatItem>> = HashMap::new();
+
+        for item in items.iter().cloned() {
+            let parent: Option<pandoculation::ChatItem> = items.iter().find(|&i| {
+                Some(&i.data.id) == item.data.parent_id.as_ref()
+            }).cloned();
+
+            child_parent_map.insert(item.data.id.clone(), parent);
+        }
 
         self.chat = Some(chat.clone());
         self.display_items = StatefulList::<pandoculation::ChatItem>::with_items(sorted_items);
         self.item_height_map = item_height_map;
+        self.child_parent_map = child_parent_map;
     }
 
     pub fn toggleCollapse(&mut self) {
@@ -104,6 +116,12 @@ impl App {
             }
         }
     }
+
+    pub fn get_collapsed(&mut self, id: &str) -> bool {
+        let collapsed = self.item_collapse_map.get(id);
+
+        return collapsed == Some(&true);
+    }
 }
 
 impl App {
@@ -115,7 +133,7 @@ impl App {
 
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
         let chat = if let Some(chat) = &self.chat {
-            chat
+            chat.clone()
         } else {
             return;
         };
@@ -147,9 +165,9 @@ impl App {
                 );
 
 
-                let is_collapsed = self.item_collapse_map.get(&item.data.id);
+                let is_collapsed = &self.get_collapsed(&item.data.id);
 
-                if let Some(false) | None = is_collapsed {
+                if !is_collapsed {
                     let wrapped_lines = textwrap::wrap(&item.data.text, &textwrap::Options::new(120));
 
                     for wrapped_line in wrapped_lines.iter() {
