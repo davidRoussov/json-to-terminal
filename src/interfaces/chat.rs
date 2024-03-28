@@ -30,7 +30,7 @@ struct App {
     session_result: Option<models::session::Session>,
     item_height_map: HashMap<String, u16>,
     item_collapse_map: HashMap<String, bool>,
-    child_parent_map: HashMap<String, Option<pandoculation::ChatItem>>,
+    child_parent_map: HashMap<String, pandoculation::ChatItem>,
 }
 
 impl App {
@@ -83,14 +83,16 @@ impl App {
         build_sorted_list(None, &parent_children_map, &mut sorted_items, &mut item_height_map);
 
 
-        let mut child_parent_map: HashMap<String, Option<pandoculation::ChatItem>> = HashMap::new();
+        let mut child_parent_map: HashMap<String, pandoculation::ChatItem> = HashMap::new();
 
         for item in items.iter().cloned() {
             let parent: Option<pandoculation::ChatItem> = items.iter().find(|&i| {
                 Some(&i.data.id) == item.data.parent_id.as_ref()
             }).cloned();
 
-            child_parent_map.insert(item.data.id.clone(), parent);
+            if let Some(parent) = parent {
+                child_parent_map.insert(item.data.id.clone(), parent);
+            }
         }
 
         self.chat = Some(chat.clone());
@@ -122,6 +124,22 @@ impl App {
 
         return collapsed == Some(&true);
     }
+
+    pub fn get_hidden(&mut self, item: &pandoculation::ChatItem) -> bool {
+        let mut maybe_parent_id = self.child_parent_map.get(&item.data.id).map(|parent| parent.data.id.clone());
+
+        while let Some(parent_id) = maybe_parent_id {
+            let is_collapsed = self.get_collapsed(&parent_id);
+
+            if is_collapsed {
+                return true;
+            }
+
+            maybe_parent_id = self.child_parent_map.get(&parent_id).map(|parent| parent.data.id.clone());
+        }
+
+        false
+    }
 }
 
 impl App {
@@ -144,36 +162,38 @@ impl App {
             .items
             .iter()
             .map(|item| {
-
                 let item_height = self.item_height_map.get(&item.data.id).unwrap_or(&0);
                 let whitespace: String = std::iter::repeat(' ').take((*item_height as usize) * 4).collect();
 
                 let mut lines: Vec<Line> = Vec::new();
 
-                let mut line1_spans: Vec<Span> = Vec::new();
+                let is_hidden = &self.get_hidden(&item);
 
-                let span_one = Span::styled(format!("{}{}", whitespace, item.data.author), Style::default().fg(Color::Blue));
-                line1_spans.push(span_one);
+                if !is_hidden {
+                    let mut line1_spans: Vec<Span> = Vec::new();
 
-                if let Some(timestamp) = &item.data.timestamp {
-                    let span = Span::styled(format!(" {}", timestamp), Style::default().fg(Color::Green));
-                    line1_spans.push(span);
-                }
+                    let span_one = Span::styled(format!("{}{}", whitespace, item.data.author), Style::default().fg(Color::Blue));
+                    line1_spans.push(span_one);
 
-                lines.push(
-                    Line::from(line1_spans)
-                );
+                    if let Some(timestamp) = &item.data.timestamp {
+                        let span = Span::styled(format!(" {}", timestamp), Style::default().fg(Color::Green));
+                        line1_spans.push(span);
+                    }
 
+                    lines.push(
+                        Line::from(line1_spans)
+                    );
 
-                let is_collapsed = &self.get_collapsed(&item.data.id);
+                    let is_collapsed = &self.get_collapsed(&item.data.id);
 
-                if !is_collapsed {
-                    let wrapped_lines = textwrap::wrap(&item.data.text, &textwrap::Options::new(120));
+                    if !is_collapsed {
+                        let wrapped_lines = textwrap::wrap(&item.data.text, &textwrap::Options::new(120));
 
-                    for wrapped_line in wrapped_lines.iter() {
-                        lines.push(
-                            Line::from(format!("{}{}", whitespace, wrapped_line))
-                        );
+                        for wrapped_line in wrapped_lines.iter() {
+                            lines.push(
+                                Line::from(format!("{}{}", whitespace, wrapped_line))
+                            );
+                        }
                     }
                 }
 
