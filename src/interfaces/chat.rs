@@ -140,6 +140,14 @@ impl App {
 
         false
     }
+
+    pub fn get_current_item(&mut self) -> Option<pandoculation::ChatItem> {
+        if let Some(i) = self.display_items.state.selected() {
+            return Some(self.display_items.items[i].clone());
+        } else {
+            return None;
+        };
+    }
 }
 
 impl App {
@@ -328,9 +336,21 @@ fn update(app: &mut App) -> Result<()> {
                     Char('q') => app.should_quit = true,
                     Char('j') => {
                         app.display_items.next();
+                        while let Some(selected_item) = app.get_current_item() {
+                           if !app.get_hidden(&selected_item) {
+                               break;
+                           }
+                           app.display_items.next();
+                       }
                     }
                     Char('k') => {
                         app.display_items.previous();
+                        while let Some(selected_item) = app.get_current_item() {
+                           if !app.get_hidden(&selected_item) {
+                               break;
+                           }
+                           app.display_items.previous();
+                       }
                     }
                     KeyCode::Enter => {
                     },
