@@ -271,6 +271,14 @@ impl<T> StatefulList<T> {
         };
         self.state.select(Some(i));
     }
+
+    fn start(&mut self) {
+        self.state.select(Some(0));
+    }
+
+    fn end(&mut self) {
+        self.state.select(Some(self.items.len() - 1));
+    }
 }
 
 pub fn start(chat: &pandoculation::Chat) -> Result<Option<models::session::Session>> {
@@ -334,6 +342,12 @@ fn update(app: &mut App) -> Result<()> {
             if key.kind == event::KeyEventKind::Press {
                 match key.code {
                     Char('q') => app.should_quit = true,
+                    Char('g') => {
+                        app.display_items.start();
+                    }
+                    Char('G') => {
+                        app.display_items.end();
+                    }
                     Char('j') => {
                         app.display_items.next();
                         while let Some(selected_item) = app.get_current_item() {
