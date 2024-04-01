@@ -7,6 +7,7 @@ use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
 use pandoculation;
+use textwrap;
 
 use crate::models;
 
@@ -80,84 +81,143 @@ impl App {
 
                 let mut lines: Vec<Line> = Vec::new();
 
-                let line_one = Line::from(format!("{}", item.data.title))
-                    .style(Style::new().add_modifier(Modifier::BOLD));
-                let line_two = Line::from(format!("{}", item.data.url))
-                    .style(Style::new().yellow());
+                let wrapped_title = textwrap::wrap(&item.data.title, &textwrap::Options::new(80));
 
-                lines.push(line_one);
-                lines.push(line_two);
+                for (index, wrapped_title_line) in wrapped_title.iter().enumerate() {
+                    let title_span = Span::styled(
+                        wrapped_title_line.to_string(),
+                        Style::new()
+                            .add_modifier(Modifier::BOLD)
+                    );
+                    if index == 0 {
+                        let mut line = Vec::new();
+                        line.push(title_span);
+
+                        let title_divider_length = 4 + 80 - wrapped_title_line.to_string().len();
+                        let title_divider = Span::styled(
+                            std::iter::repeat(' ').take(title_divider_length).collect::<String>(),
+                            Style::new()
+                        );
+                        line.push(title_divider);
+
+                        if let Some(author) = &item.data.author {
+                            let span = Span::styled(
+                                author,
+                                Style::new()
+                                    .fg(Color::Green)
+                            );
+                            line.push(span);
+
+                            let divider_length = 4 + 20 - author.len();
+                            let divider = Span::styled(
+                                std::iter::repeat(' ').take(divider_length).collect::<String>(),
+                                Style::new()
+                            );
+                            line.push(divider);
+                        }
+
+                        if let Some(points) = &item.data.points {
+                            let span = Span::styled(
+                                points,
+                                Style::new()
+                                    .fg(Color::Green)
+                            );
+                            line.push(span);
+
+                            let divider_length = 4 + 20 - points.len();
+                            let divider = Span::styled(
+                                std::iter::repeat(' ').take(divider_length).collect::<String>(),
+                                Style::new()
+                            );
+                            line.push(divider);
+                        }
+
+                        lines.push(Line::from(line));
+                    } else {
+                        lines.push(
+                            Line::from(vec![title_span])
+                        );
+                    }
+                }
+
+                //let line_one = Line::from(format!("{}", item.data.title))
+                //    .style(Style::new().add_modifier(Modifier::BOLD));
+                //let line_two = Line::from(format!("{}", item.data.url))
+                //    .style(Style::new().yellow());
+
+                //lines.push(line_one);
+                //lines.push(line_two);
                
-                if let Some(chat_url) = &item.data.chat_url {
-                    let span_one = Span::styled(
-                        "chat: ",
-                        Style::new()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
-                    );
-                    let span_two = Span::styled(
-                        format!("{}", chat_url),
-                        Style::new()
-                            .fg(Color::Yellow)
-                    );
-                    let line = Line::from(vec![span_one, span_two]);
-                    lines.push(line);
-                }
+                //if let Some(chat_url) = &item.data.chat_url {
+                //    let span_one = Span::styled(
+                //        "chat: ",
+                //        Style::new()
+                //            .fg(Color::Yellow)
+                //            .add_modifier(Modifier::BOLD)
+                //    );
+                //    let span_two = Span::styled(
+                //        format!("{}", chat_url),
+                //        Style::new()
+                //            .fg(Color::Yellow)
+                //    );
+                //    let line = Line::from(vec![span_one, span_two]);
+                //    lines.push(line);
+                //}
 
-                let mut additional_info: Vec<Span> = Vec::new();
+                //let mut additional_info: Vec<Span> = Vec::new();
 
-                if let Some(points) = &item.data.points {
-                    let span_one = Span::styled(
-                        "points: ",
-                        Style::new()
-                            .fg(Color::Green)
-                            .add_modifier(Modifier::BOLD)
-                    );
-                    additional_info.push(span_one);
+                //if let Some(points) = &item.data.points {
+                //    let span_one = Span::styled(
+                //        "points: ",
+                //        Style::new()
+                //            .fg(Color::Green)
+                //            .add_modifier(Modifier::BOLD)
+                //    );
+                //    additional_info.push(span_one);
 
-                    let span_two = Span::styled(
-                        format!("{}", points),
-                        Style::new()
-                            .fg(Color::Green)
-                    );
-                    additional_info.push(span_two);
-                }
+                //    let span_two = Span::styled(
+                //        format!("{}", points),
+                //        Style::new()
+                //            .fg(Color::Green)
+                //    );
+                //    additional_info.push(span_two);
+                //}
 
-                if let Some(author) = &item.data.author {
-                    let span_one = Span::styled(
-                        " author: ",
-                        Style::new()
-                            .fg(Color::Green)
-                            .add_modifier(Modifier::BOLD)
-                    );
-                    additional_info.push(span_one);
+                //if let Some(author) = &item.data.author {
+                //    let span_one = Span::styled(
+                //        " author: ",
+                //        Style::new()
+                //            .fg(Color::Green)
+                //            .add_modifier(Modifier::BOLD)
+                //    );
+                //    additional_info.push(span_one);
 
-                    let span_two = Span::styled(
-                        format!("{}", author),
-                        Style::new()
-                            .fg(Color::Green)
-                    );
-                    additional_info.push(span_two);
-                }
+                //    let span_two = Span::styled(
+                //        format!("{}", author),
+                //        Style::new()
+                //            .fg(Color::Green)
+                //    );
+                //    additional_info.push(span_two);
+                //}
 
-                if let Some(timestamp) = &item.data.timestamp {
-                    let span_one = Span::styled(
-                        " timestamp: ",
-                        Style::new()
-                            .fg(Color::Green)
-                            .add_modifier(Modifier::BOLD)
-                    );
-                    additional_info.push(span_one);
+                //if let Some(timestamp) = &item.data.timestamp {
+                //    let span_one = Span::styled(
+                //        " timestamp: ",
+                //        Style::new()
+                //            .fg(Color::Green)
+                //            .add_modifier(Modifier::BOLD)
+                //    );
+                //    additional_info.push(span_one);
 
-                    let span_two = Span::styled(
-                        format!("{}", timestamp),
-                        Style::new()
-                            .fg(Color::Green)
-                    );
-                    additional_info.push(span_two);
-                }
+                //    let span_two = Span::styled(
+                //        format!("{}", timestamp),
+                //        Style::new()
+                //            .fg(Color::Green)
+                //    );
+                //    additional_info.push(span_two);
+                //}
 
-                lines.push(Line::from(additional_info));
+                //lines.push(Line::from(additional_info));
                 
                 return RListItem::new(lines);
             })
