@@ -1,11 +1,8 @@
 extern crate simple_logging;
 extern crate log;
 
-use async_recursion::async_recursion;
-use tokio::runtime::Runtime;
-use std::io::{self, Write};
+use std::io::{self};
 use std::process;
-use std::env;
 use std::io::{Read};
 use std::fs::File;
 use log::{LevelFilter};
@@ -49,7 +46,7 @@ fn main() -> io::Result<()> {
         Ok(stdin) => {
             json_string = stdin;
         }
-        Err(e) => {
+        Err(_e) => {
             log::debug!("Did not receive input from stdin");
         }
     }

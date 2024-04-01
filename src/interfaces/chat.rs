@@ -1,4 +1,3 @@
-use serde_json::Value;
 use crossterm::{
     event::{self, Event, KeyCode::Char, KeyCode},
     execute,
@@ -7,7 +6,6 @@ use crossterm::{
 use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
-use linked_hash_map::LinkedHashMap;
 use textwrap;
 use pandoculation;
 use std::collections::HashMap;
