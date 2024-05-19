@@ -1,59 +1,9 @@
-use serde_json::Value;
-use serde::{Serialize};
-use std::collections::HashMap;
-use pandoculation;
+mod error;
 
-pub mod interfaces;
-pub mod models;
+use error::{Errors};
 
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Serialize)]
-pub enum Errors {
-    JsonNotProvided,
-    UnexpectedDocumentType,
-    UnexpectedError,
-    IncorrectParser,
+pub fn render(json: String) -> Result<String, Errors> {
+    log::trace!("In render");
+
+    unimplemented!()
 }
-
-enum DeserializationResult {
-    CuratedListing(pandoculation::CuratedListing),
-    Chat(pandoculation::Chat),
-}
-
-pub fn json_to_terminal(json_string: String) -> Result<Option<models::session::Session>, Errors> {
-    log::trace!("In json_to_terminal");
-    log::debug!("json_string: {:?}", json_string);
-
-    match try_deserialize(&json_string) {
-         Some(DeserializationResult::CuratedListing(ref listing)) => {
-             interfaces::curated_listing::start(listing).map_err(|e| {
-                 log::error!("Error: {:?}", e);
-                 Errors::UnexpectedError
-             })
-         },
-         Some(DeserializationResult::Chat(ref chat)) => {
-             interfaces::chat::start(chat).map_err(|e| {
-                 log::error!("Error: {:?}", e);
-                 Errors::UnexpectedError
-             })
-         },
-         None => Err(Errors::UnexpectedDocumentType)
-    }
-}
-
-fn try_deserialize(data: &str) -> Option<DeserializationResult> {
-     if let Ok(listing) = serde_json::from_str::<HashMap<String, pandoculation::CuratedListing>>(data) {
-         if let Some(curated_listing) = listing.get("CuratedListing") {
-             return Some(DeserializationResult::CuratedListing(curated_listing.clone()));
-         }
-     }
-
-     if let Ok(chat) = serde_json::from_str::<HashMap<String, pandoculation::Chat>>(data) {
-         if let Some(chat) = chat.get("Chat") {
-             return Some(DeserializationResult::Chat(chat.clone()));
-         }
-     }
-
-     None
- }

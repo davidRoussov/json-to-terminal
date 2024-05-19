@@ -1,6 +1,3 @@
-extern crate simple_logging;
-extern crate log;
-
 use std::io::{self};
 use std::process;
 use std::io::{Read};
@@ -8,9 +5,7 @@ use std::fs::File;
 use log::{LevelFilter};
 use clap::{Arg, App};
 use atty::Stream;
-
-pub mod interfaces;
-pub mod models;
+use env_logger::Builder;
 
 fn get_json_from_file(file_name: &str) -> String {
     let mut file = File::open(file_name).unwrap_or_else(|err| {
@@ -37,8 +32,22 @@ fn load_stdin() -> io::Result<String> {
     return Ok(buffer);
 }
 
+fn init_logging() -> Builder {
+    let mut builder = Builder::from_default_env();
+
+    builder.filter(None, LevelFilter::Off); // disables all logging
+    builder.filter_module("parversion", LevelFilter::Trace);
+
+    let log_file = std::fs::File::create("./debug/debug.log").unwrap();
+    builder.target(env_logger::Target::Pipe(Box::new(log_file)));
+
+    builder.init();
+
+    builder
+}
+
 fn main() -> io::Result<()> {
-    let _ = simple_logging::log_to_file("debug.log", LevelFilter::Trace);
+    let _ = init_logging();
 
     let mut json_string = String::new();
 
@@ -56,7 +65,7 @@ fn main() -> io::Result<()> {
              .short('f')
              .long("file")
              .value_name("FILE")
-             .help("Provide file as document for processing"))
+             .help("Provide processed document as file"))
         .get_matches();
 
     if let Some(file_name) = matches.value_of("file") {
@@ -73,13 +82,11 @@ fn main() -> io::Result<()> {
     }
     log::debug!("{}", json_string);
 
-    let result = tooey::json_to_terminal(json_string);
+    let result = tooey::render(json_string);
 
     match result {
         Ok(session_result) => {
-            if let Some(session_result) = session_result {
-                println!("{:?}", session_result);
-            } 
+            println!("{:?}", session_result);
         }
         Err(err) => {
             log::error!("session ended in error: {:?}", err);

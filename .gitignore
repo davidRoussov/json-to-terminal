@@ -1,6 +1,9 @@
 /target
 
-# log
-*.log
+# Resources
+resources/*
+!resources/.gitkeep
 
-/dev
+# Debug
+debug/*
+!debug/.gitkeep
