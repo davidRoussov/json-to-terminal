@@ -36,7 +36,7 @@ fn init_logging() -> Builder {
     let mut builder = Builder::from_default_env();
 
     builder.filter(None, LevelFilter::Off); // disables all logging
-    builder.filter_module("parversion", LevelFilter::Trace);
+    builder.filter_module("tooey", LevelFilter::Trace);
 
     let log_file = std::fs::File::create("./debug/debug.log").unwrap();
     builder.target(env_logger::Target::Pipe(Box::new(log_file)));
@@ -80,7 +80,6 @@ fn main() -> io::Result<()> {
         log::debug!("JSON not provided, aborting...");
         return Ok(());
     }
-    log::debug!("{}", json_string);
 
     let result = tooey::render(json_string);
 
