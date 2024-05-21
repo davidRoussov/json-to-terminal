@@ -1,0 +1,81 @@
+use crossterm::{
+    event::{self, Event, KeyCode::Char, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{prelude::*, widgets::*};
+use ratatui::{widgets::List as RList};
+use ratatui::{widgets::ListItem as RListItem};
+use textwrap;
+use pandoculation;
+use std::collections::HashMap;
+
+use crate::input::*;
+use crate::session::*;
+use crate::app::{App};
+
+type Err = Box<dyn std::error::Error>;
+type Result<T> = std::result::Result<T, Err>;
+
+pub fn start_interface(input: &Input) -> Result<Session> {
+    log::trace!("In start_interface");
+
+    startup()?;
+
+    let result = run(input);
+
+    shutdown()?;
+
+    Ok(Session {
+        result: "all g".to_string()
+    })
+}
+
+fn startup() -> Result<()> {
+    enable_raw_mode()?;
+    execute!(std::io::stderr(), EnterAlternateScreen)?;
+    Ok(())
+}
+
+fn shutdown() -> Result<()> {
+    execute!(std::io::stderr(), LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+    Ok(())
+}
+
+fn run(input: &Input) -> Result<Session> {
+    let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
+
+    let mut app = App::new();
+    app.load_input(input);
+
+    loop {
+        t.draw(|f| {
+            f.render_widget(&mut app, f.size());
+        });
+
+        update(&mut app)?;
+
+        if app.should_quit {
+            break;
+        }
+    }
+
+    Ok(app.session)
+}
+
+fn update(app: &mut App) -> Result<()> {
+    if event::poll(std::time::Duration::from_millis(50))? {
+        if let Event::Key(key) = event::read()? {
+            if key.kind == event::KeyEventKind::Press {
+                match key.code {
+                    Char('q') => app.quit(),
+                    _ => {},
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+

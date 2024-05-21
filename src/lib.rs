@@ -1,10 +1,11 @@
 mod error;
-mod interface;
+mod terminal;
 mod input;
 mod session;
+mod app;
 
 use error::{Errors};
-use interface::{start_interface};
+use terminal::{start_interface};
 use input::{Input};
 use session::{Session};
 
@@ -18,5 +19,8 @@ pub fn render(json: String) -> Result<Session, Errors> {
 
     log::info!("Successfully deserialized JSON");
 
-    start_interface(&input)
+    start_interface(&input).map_err(|e| {
+        log::error!("{}", e);
+        Errors::UnexpectedError
+    })
 }
