@@ -105,14 +105,17 @@ impl App {
 
                 let mut lines: Vec<Line> = Vec::new();
 
-                let span = Span::styled(
-                    "test".to_string(),
-                    Style::new()
-                        .add_modifier(Modifier::BOLD)
-                        .fg(Color::Green)
-                );
+                for (key, value) in item.values.iter() {
+                    let span = Span::styled(
+                        format!("{}: {}", key, value),
+                        Style::new()
+                            .add_modifier(Modifier::BOLD)
+                            .fg(Color::Green)
+                    );
 
-                lines.push(span.into());
+                    lines.push(span.into());
+                }
+
 
                 RListItem::new(lines)
             })
