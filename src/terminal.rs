@@ -78,4 +78,3 @@ fn update(app: &mut App) -> Result<()> {
 
     Ok(())
 }
-
