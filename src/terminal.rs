@@ -70,6 +70,12 @@ fn update(app: &mut App) -> Result<()> {
             if key.kind == event::KeyEventKind::Press {
                 match key.code {
                     Char('q') => app.quit(),
+                    KeyCode::Enter => {
+                        app.deeper();
+                    },
+                    KeyCode::Backspace => {
+                        app.higher();
+                    },
                     _ => {},
                 }
             }

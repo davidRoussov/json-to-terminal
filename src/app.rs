@@ -42,9 +42,24 @@ impl App {
         self.should_quit = true;
     }
 
+    pub fn deeper(&mut self) {
+        self.current_depth = self.current_depth + 1;
+        self.init_display_items();
+    }
+
+    pub fn higher(&mut self) {
+        self.current_depth = self.current_depth - 1;
+        self.init_display_items();
+    }
+
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
+        self.init_display_items();
+    }
+}
 
+impl App {
+    fn init_display_items(&mut self) {
         let complex_objects = self.input
             .clone()
             .unwrap()
