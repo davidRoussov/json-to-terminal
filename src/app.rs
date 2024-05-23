@@ -7,6 +7,7 @@ use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
 use textwrap;
+use std::collections::HashMap;
 
 use crate::input::{Input, ComplexObject};
 use crate::session::{Session};
@@ -98,13 +99,24 @@ impl<T> StatefulList<T> {
 
 impl App {
     fn init_display_items(&mut self) {
-        let complex_objects = self.input
+        let complex_objects: Vec<ComplexObject> = self.input
             .clone()
             .unwrap()
             .complex_objects
             .iter()
+            .filter(|item| item.depth == self.current_depth)
+            .cloned()
+            .collect();
+
+        let mut type_id_counts: HashMap<String, usize> = HashMap::new();
+        for obj in &complex_objects {
+            *type_id_counts.entry(obj.type_id.clone()).or_insert(0) += 1;
+        }
+
+        let complex_objects = complex_objects
+            .iter()
             .filter(|item| {
-                item.depth == self.current_depth
+                type_id_counts.get(&item.type_id).map_or(false, |&count| count > 1)
             })
             .cloned()
             .collect();
