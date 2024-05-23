@@ -14,12 +14,12 @@ use crate::session::{Session};
 pub struct App {
     pub should_quit: bool,
     pub session: Session,
+    pub display_items: StatefulList<ComplexObject>,
     input: Option<Input>,
     current_depth: u16,
-    display_items: StatefulList<ComplexObject>,
 }
 
-struct StatefulList<T> {
+pub struct StatefulList<T> {
     state: ListState,
     items: Vec<T>,
     last_selected: Option<usize>,
@@ -55,6 +55,44 @@ impl App {
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
         self.init_display_items();
+    }
+}
+
+impl<T> StatefulList<T> {
+    fn with_items(items: Vec<T>) -> StatefulList<T> {
+        StatefulList {
+            state: ListState::default(),
+            items: items,
+            last_selected: None,
+        }
+    }
+
+    pub fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.last_selected.unwrap_or(0),
+        };
+        self.state.select(Some(i));
     }
 }
 
@@ -97,31 +135,18 @@ impl App {
     }
 
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
-        let items: Vec<RListItem> = self
-            .display_items
-            .items
+        let complex_objects = &self.input.as_ref().unwrap().complex_objects;
+
+        let items: Vec<RListItem> = self.display_items.items
+            .clone()
             .iter()
             .map(|item| {
-
-                let mut lines: Vec<Line> = Vec::new();
-
-                for (key, value) in item.values.iter() {
-                    let span = Span::styled(
-                        format!("{}: {}", key, value),
-                        Style::new()
-                            .add_modifier(Modifier::BOLD)
-                            .fg(Color::Green)
-                    );
-
-                    lines.push(span.into());
-                }
-
-
-                RListItem::new(lines)
+                let complex_lines = complex_object_to_lines(item.clone(), &complex_objects);
+                RListItem::new(complex_lines)
             })
             .collect();
 
-        let list = RList::new(items.clone())
+        let list = RList::new(items)
             .block(Block::default().title("List").borders(Borders::ALL))
             .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
@@ -131,43 +156,33 @@ impl App {
 
         StatefulWidget::render(list, area, buf, &mut self.display_items.state);
     }
-
 }
 
-impl<T> StatefulList<T> {
-    fn with_items(items: Vec<T>) -> StatefulList<T> {
-        StatefulList {
-            state: ListState::default(),
-            items: items,
-            last_selected: None,
-        }
+fn complex_object_to_lines(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> Vec<Line> {
+    let mut lines: Vec<Line> = vec![
+        Span::styled(
+            complex_object
+                .values
+                .values()
+                .fold(String::new(), |mut acc, item| {
+                    acc.push_str(item);
+                    acc
+                }),
+            Style::new()
+                .add_modifier(Modifier::BOLD)
+                .fg(Color::Blue)
+        ).into()
+    ];
+
+    for id in complex_object.complex_objects.iter() {
+        let child_object = complex_objects
+            .iter()
+            .find(|item| item.id == *id)
+            .unwrap();
+        let child_lines = complex_object_to_lines(child_object.clone(), complex_objects);
+
+        lines.extend(child_lines.clone());
     }
 
-    fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => self.last_selected.unwrap_or(0),
-        };
-        self.state.select(Some(i));
-    }
-
-    fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => self.last_selected.unwrap_or(0),
-        };
-        self.state.select(Some(i));
-    }
+    lines
 }
