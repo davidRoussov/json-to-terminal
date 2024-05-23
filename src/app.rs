@@ -18,6 +18,7 @@ pub struct App {
     pub display_items: StatefulList<ComplexObject>,
     input: Option<Input>,
     current_depth: u16,
+    max_depth: u16,
 }
 
 pub struct StatefulList<T> {
@@ -36,6 +37,7 @@ impl App {
                 result: "init".to_string()
             },
             current_depth: 0,
+            max_depth: 0,
         }
     }
 
@@ -55,6 +57,7 @@ impl App {
 
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
+        self.update_max_depth();
         self.init_display_items();
     }
 }
@@ -98,6 +101,15 @@ impl<T> StatefulList<T> {
 }
 
 impl App {
+    fn update_max_depth(&mut self) {
+        self.max_depth = self.input
+            .as_ref()
+            .unwrap()
+            .complex_objects
+            .iter()
+            .fold(0, |acc, item| if item.depth > acc { item.depth } else { acc });
+    }
+
     fn init_display_items(&mut self) {
         let complex_objects: Vec<ComplexObject> = self.input
             .clone()
@@ -113,7 +125,7 @@ impl App {
             *type_id_counts.entry(obj.type_id.clone()).or_insert(0) += 1;
         }
 
-        let complex_objects = complex_objects
+        let complex_objects: Vec<ComplexObject> = complex_objects
             .iter()
             .filter(|item| {
                 type_id_counts.get(&item.type_id).map_or(false, |&count| count > 1)
@@ -121,7 +133,12 @@ impl App {
             .cloned()
             .collect();
 
-        self.display_items = StatefulList::<ComplexObject>::with_items(complex_objects);
+
+        if complex_objects.is_empty() && self.current_depth < self.max_depth {
+            self.deeper();
+        } else {
+            self.display_items = StatefulList::<ComplexObject>::with_items(complex_objects);
+        }
     }
 }
 
