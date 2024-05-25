@@ -170,7 +170,17 @@ impl App {
             .clone()
             .iter()
             .map(|item| {
-                let complex_lines = complex_object_to_lines(item.clone(), &complex_objects);
+                //let complex_lines = complex_object_to_lines(item.clone(), &complex_objects);
+
+                let complex_lines: Vec<Line> = vec![
+                    Span::styled(
+                        complex_object_to_string(item.clone(), &complex_objects),
+                        Style::new()
+                            .add_modifier(Modifier::BOLD)
+                            .fg(Color::Green)
+                    ).into()
+                ];
+
                 RListItem::new(complex_lines)
             })
             .collect();
@@ -185,6 +195,27 @@ impl App {
 
         StatefulWidget::render(list, area, buf, &mut self.display_items.state);
     }
+}
+
+fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> String {
+    let mut result: String = complex_object.values
+        .values()
+        .fold(String::new(), |mut acc, item| {
+            acc.push_str(item);
+            acc
+        });
+
+    for id in complex_object.complex_objects.iter() {
+        let child_object = complex_objects
+            .iter()
+            .find(|item| item.id == *id)
+            .unwrap();
+        result.push_str(
+            &complex_object_to_string(child_object.clone(), complex_objects)
+        );
+    }
+
+    result
 }
 
 fn complex_object_to_lines(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> Vec<Line> {
