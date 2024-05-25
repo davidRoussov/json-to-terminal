@@ -172,16 +172,21 @@ impl App {
             .map(|item| {
                 //let complex_lines = complex_object_to_lines(item.clone(), &complex_objects);
 
-                let complex_lines: Vec<Line> = vec![
-                    Span::styled(
-                        complex_object_to_string(item.clone(), &complex_objects),
+                let mut lines: Vec<Line> = Vec::new();
+                let complex_string = complex_object_to_string(item.clone(), &complex_objects);
+                let wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
+
+                for segment in wrapped_string.iter() {
+                    let span: Span = Span::styled(
+                        segment.to_string(),
                         Style::new()
                             .add_modifier(Modifier::BOLD)
                             .fg(Color::Green)
-                    ).into()
-                ];
+                    ).into();
+                    lines.push(Line::from(span));
+                }
 
-                RListItem::new(complex_lines)
+                RListItem::new(lines)
             })
             .collect();
 
@@ -200,9 +205,9 @@ impl App {
 fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> String {
     let mut result: String = complex_object.values
         .values()
-        .fold(String::new(), |mut acc, item| {
-            acc.push_str(item);
-            acc
+        .enumerate()
+        .fold(String::new(), |mut acc, (index, item)| {
+            acc + " " + item.trim()
         });
 
     for id in complex_object.complex_objects.iter() {
