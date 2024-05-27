@@ -9,14 +9,15 @@ use ratatui::{widgets::ListItem as RListItem};
 use textwrap;
 use std::collections::HashMap;
 
-use crate::input::{Input, ComplexObject};
+use crate::input::{Input, ComplexType, ComplexObject};
 use crate::session::{Session};
 
 pub struct App {
     pub should_quit: bool,
     pub session: Session,
     pub display_items: StatefulList<ComplexObject>,
-    input: Option<Input>,
+    complex_types: Vec<ComplexType>,
+    complex_objects: Vec<ComplexObject>,
     current_depth: u16,
     max_depth: u16,
 }
@@ -31,7 +32,8 @@ impl App {
     pub fn new() -> App {
         App {
             should_quit: false,
-            input: None,
+            complex_types: Vec::new(),
+            complex_objects: Vec::new(),
             display_items: StatefulList::<ComplexObject>::with_items(Vec::new()),
             session: Session {
                 result: "init".to_string()
@@ -56,7 +58,20 @@ impl App {
     }
 
     pub fn load_input(&mut self, input: &Input) {
-        self.input = Some(input.clone());
+
+        // TODO For some reason parversion produces empty objects 
+        // We filter them out here, but should investigate root cause
+        self.complex_objects = input.complex_objects
+            .clone()
+            .iter()
+            .filter(|item| {
+                !(item.values.is_empty() && item.complex_objects.is_empty())
+            })
+            .cloned()
+            .collect();
+        self.complex_types = input.complex_types
+            .clone();
+
         self.update_max_depth();
         self.init_display_items();
     }
@@ -102,19 +117,13 @@ impl<T> StatefulList<T> {
 
 impl App {
     fn update_max_depth(&mut self) {
-        self.max_depth = self.input
-            .as_ref()
-            .unwrap()
-            .complex_objects
+        self.max_depth = self.complex_objects
             .iter()
             .fold(0, |acc, item| if item.depth > acc { item.depth } else { acc });
     }
 
     fn init_display_items(&mut self) {
-        let complex_objects: Vec<ComplexObject> = self.input
-            .clone()
-            .unwrap()
-            .complex_objects
+        let complex_objects: Vec<ComplexObject> = self.complex_objects
             .iter()
             .filter(|item| item.depth == self.current_depth)
             .cloned()
@@ -164,16 +173,12 @@ impl App {
     }
 
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
-        let complex_objects = &self.input.as_ref().unwrap().complex_objects;
-
         let items: Vec<RListItem> = self.display_items.items
             .clone()
             .iter()
             .map(|item| {
-                //let complex_lines = complex_object_to_lines(item.clone(), &complex_objects);
-
                 let mut lines: Vec<Line> = Vec::new();
-                let complex_string = complex_object_to_string(item.clone(), &complex_objects);
+                let complex_string = complex_object_to_string(item.clone(), &self.complex_objects);
                 let wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
 
                 for segment in wrapped_string.iter() {
@@ -213,11 +218,13 @@ fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec
     for id in complex_object.complex_objects.iter() {
         let child_object = complex_objects
             .iter()
-            .find(|item| item.id == *id)
-            .unwrap();
-        result.push_str(
-            &complex_object_to_string(child_object.clone(), complex_objects)
-        );
+            .find(|item| item.id == *id);
+
+        if let Some(child_object) = child_object {
+            result.push_str(
+                &complex_object_to_string(child_object.clone(), complex_objects)
+            );
+        }
     }
 
     result
