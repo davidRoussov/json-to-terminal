@@ -13,7 +13,7 @@ pub struct ComplexObject {
     pub id: String,
     pub parent_id: Option<String>,
     pub type_id: String,
-    pub values: HashMap<String, String>,
+    pub values: HashMap<String, HashMap<String, String>>,
     pub depth: u16,
     pub complex_objects: Vec<String>,
 }

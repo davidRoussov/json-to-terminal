@@ -239,7 +239,11 @@ fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec
         .values()
         .enumerate()
         .fold(String::new(), |mut acc, (index, item)| {
-            acc + " " + item.trim()
+            if item.get("is_url").unwrap() == "true" || item.get("is_decorative").unwrap() == "true" || item.get("is_id").unwrap() == "true" {
+                acc
+            } else {
+                acc + " " + item.get("value").unwrap().trim()
+            }
         });
 
     for id in complex_object.complex_objects.iter() {
@@ -255,33 +259,4 @@ fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec
     }
 
     result
-}
-
-fn complex_object_to_lines(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> Vec<Line> {
-    let mut lines: Vec<Line> = vec![
-        Span::styled(
-            complex_object
-                .values
-                .values()
-                .fold(String::new(), |mut acc, item| {
-                    acc.push_str(item);
-                    acc
-                }),
-            Style::new()
-                .add_modifier(Modifier::BOLD)
-                .fg(Color::Blue)
-        ).into()
-    ];
-
-    for id in complex_object.complex_objects.iter() {
-        let child_object = complex_objects
-            .iter()
-            .find(|item| item.id == *id)
-            .unwrap();
-        let child_lines = complex_object_to_lines(child_object.clone(), complex_objects);
-
-        lines.extend(child_lines.clone());
-    }
-
-    lines
 }
