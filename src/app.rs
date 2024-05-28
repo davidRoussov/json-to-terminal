@@ -179,14 +179,29 @@ impl App {
             .map(|item| {
                 let mut lines: Vec<Line> = Vec::new();
                 let complex_string = complex_object_to_string(item.clone(), &self.complex_objects);
-                let wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
+                let mut wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
+                let mut truncated = false;
 
+                if wrapped_string.len() > 20 {
+                    wrapped_string.truncate(20);
+                    truncated = true;
+                }
+                
                 for segment in wrapped_string.iter() {
                     let span: Span = Span::styled(
                         segment.to_string(),
                         Style::new()
-                            .add_modifier(Modifier::BOLD)
                             .fg(Color::Green)
+                    ).into();
+                    lines.push(Line::from(span));
+                }
+
+                if truncated {
+                    let span: Span = Span::styled(
+                        " (truncated)",
+                        Style::new()
+                            .add_modifier(Modifier::BOLD)
+                            .fg(Color::Red)
                     ).into();
                     lines.push(Line::from(span));
                 }
