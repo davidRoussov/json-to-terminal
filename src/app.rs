@@ -182,8 +182,17 @@ impl App {
             .map(|item| {
                 let mut lines: Vec<Line> = Vec::new();
                 let complex_string = complex_object_to_string(item.clone(), &self.complex_objects);
+                let complex_type = self.complex_types.iter().find(|t| t.id == item.type_id).unwrap();
                 let mut wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
                 let mut truncated = false;
+
+                let title_span: Span = Span::styled(
+                    complex_type.name.to_string(),
+                    Style::new()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Blue)
+                ).into();
+                lines.push(Line::from(title_span));
 
                 if wrapped_string.len() > 20 {
                     wrapped_string.truncate(20);
