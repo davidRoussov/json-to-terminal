@@ -19,6 +19,7 @@ pub struct App {
     complex_types: Vec<ComplexType>,
     complex_objects: Vec<ComplexObject>,
     current_depth: u16,
+    selected_parents: Vec<String>,
     max_depth: u16,
 }
 
@@ -38,7 +39,8 @@ impl App {
             session: Session {
                 result: "init".to_string()
             },
-            current_depth: 0,
+            current_depth: 1,
+            selected_parents: Vec::new(),
             max_depth: 0,
         }
     }
@@ -48,11 +50,15 @@ impl App {
     }
 
     pub fn deeper(&mut self) {
-        self.current_depth = self.current_depth + 1;
-        self.init_display_items();
+        if let Some(current_object) = self.get_current_object() {
+            self.current_depth = self.current_depth + 1;
+            self.selected_parents.push(current_object.id.clone());
+            self.init_display_items();
+        }
     }
 
     pub fn higher(&mut self) {
+        self.selected_parents.pop();
         self.current_depth = self.current_depth - 1;
         self.init_display_items();
     }
@@ -72,7 +78,6 @@ impl App {
         self.complex_types = input.complex_types
             .clone();
 
-        self.update_max_depth();
         self.init_display_items();
     }
 }
@@ -116,37 +121,35 @@ impl<T> StatefulList<T> {
 }
 
 impl App {
-    fn update_max_depth(&mut self) {
-        self.max_depth = self.complex_objects
-            .iter()
-            .fold(0, |acc, item| if item.depth > acc { item.depth } else { acc });
-    }
-
     fn init_display_items(&mut self) {
         let complex_objects: Vec<ComplexObject> = self.complex_objects
             .iter()
-            .filter(|item| item.depth == self.current_depth)
-            .cloned()
-            .collect();
-
-        let mut type_id_counts: HashMap<String, usize> = HashMap::new();
-        for obj in &complex_objects {
-            *type_id_counts.entry(obj.type_id.clone()).or_insert(0) += 1;
-        }
-
-        let complex_objects: Vec<ComplexObject> = complex_objects
-            .iter()
             .filter(|item| {
-                type_id_counts.get(&item.type_id).map_or(false, |&count| count > 1)
+                if item.depth != self.current_depth {
+                    return false;
+                }
+
+                if !self.selected_parents.is_empty() {
+                    if let Some(parent_id) = &item.parent_id {
+                        if parent_id != self.selected_parents.last().unwrap() {
+                            return false;
+                        }
+                    }
+                }
+
+                true
             })
             .cloned()
             .collect();
 
+        self.display_items = StatefulList::<ComplexObject>::with_items(complex_objects);
+    }
 
-        if complex_objects.is_empty() && self.current_depth < self.max_depth {
-            self.deeper();
+    fn get_current_object(&mut self) -> Option<ComplexObject> {
+        if let Some(i) = self.display_items.state.selected() {
+            Some(self.display_items.items[i].clone())
         } else {
-            self.display_items = StatefulList::<ComplexObject>::with_items(complex_objects);
+            None
         }
     }
 }

@@ -11,6 +11,7 @@ pub struct ComplexType {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ComplexObject {
     pub id: String,
+    pub parent_id: Option<String>,
     pub type_id: String,
     pub values: HashMap<String, String>,
     pub depth: u16,
