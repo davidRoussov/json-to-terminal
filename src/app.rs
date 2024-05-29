@@ -153,6 +153,12 @@ impl App {
                     }
                 }
 
+                let complex_string = complex_object_to_string(item.clone().clone(), &self.complex_objects);
+
+                if complex_string.is_empty() {
+                    return false;
+                }
+
                 true
             })
             .cloned()
