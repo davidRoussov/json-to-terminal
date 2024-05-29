@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use crate::input::{Input, ComplexType, ComplexObject};
 use crate::session::{Session};
 
+const DEFAULT_DEPTH: u16 = 1;
+
 pub struct App {
     pub should_quit: bool,
     pub session: Session,
@@ -37,9 +39,9 @@ impl App {
             complex_objects: Vec::new(),
             display_items: StatefulList::<ComplexObject>::with_items(Vec::new()),
             session: Session {
-                result: "init".to_string()
+                depth: DEFAULT_DEPTH,
             },
-            current_depth: 1,
+            current_depth: DEFAULT_DEPTH,
             selected_parents: Vec::new(),
             max_depth: 0,
         }
@@ -89,6 +91,12 @@ impl App {
 
         self.init_display_items();
         self.update_max_depth();
+    }
+
+    pub fn get_session(&self) -> Session {
+        Session {
+            depth: self.current_depth,
+        }
     }
 }
 
@@ -179,24 +187,16 @@ impl App {
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([
-            Constraint::Length(4),
             Constraint::Min(0),
         ]);
 
-        let [header_area, body_area] = vertical.areas(area);
+        let [body_area] = vertical.areas(area);
 
-        self.render_document_header(header_area, buf);
         self.render_body(body_area, buf);
     }
 }
 
 impl App {
-    fn render_document_header(&mut self, area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Placeholder document title")
-            .block(Block::default().borders(Borders::ALL).title("Document"))
-            .render(area, buf);
-    }
-
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
         let items: Vec<RListItem> = self.display_items.items
             .clone()
@@ -204,17 +204,8 @@ impl App {
             .map(|item| {
                 let mut lines: Vec<Line> = Vec::new();
                 let complex_string = complex_object_to_string(item.clone(), &self.complex_objects);
-                let complex_type = self.complex_types.iter().find(|t| t.id == item.type_id).unwrap();
                 let mut wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
                 let mut truncated = false;
-
-                let title_span: Span = Span::styled(
-                    complex_type.name.to_string(),
-                    Style::new()
-                        .add_modifier(Modifier::BOLD)
-                        .fg(Color::Blue)
-                ).into();
-                lines.push(Line::from(title_span));
 
                 if wrapped_string.len() > 20 {
                     wrapped_string.truncate(20);
@@ -240,12 +231,14 @@ impl App {
                     lines.push(Line::from(span));
                 }
 
+                lines.push(Line::from(""));
+
                 RListItem::new(lines)
             })
             .collect();
 
         let list = RList::new(items)
-            .block(Block::default().title("List").borders(Borders::ALL))
+            .block(Block::default())
             .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
             .highlight_symbol(">>")

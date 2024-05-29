@@ -26,9 +26,7 @@ pub fn start_interface(input: &Input) -> Result<Session> {
 
     shutdown()?;
 
-    Ok(Session {
-        result: "all g".to_string()
-    })
+    result
 }
 
 fn startup() -> Result<()> {
@@ -61,7 +59,7 @@ fn run(input: &Input) -> Result<Session> {
         }
     }
 
-    Ok(app.session)
+    Ok(app.get_session())
 }
 
 fn update(app: &mut App) -> Result<()> {
