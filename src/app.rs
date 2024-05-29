@@ -51,16 +51,25 @@ impl App {
 
     pub fn deeper(&mut self) {
         if let Some(current_object) = self.get_current_object() {
-            self.current_depth = self.current_depth + 1;
-            self.selected_parents.push(current_object.id.clone());
-            self.init_display_items();
+            if self.current_depth < self.max_depth {
+                self.current_depth = self.current_depth + 1;
+                self.selected_parents.push(current_object.id.clone());
+                self.init_display_items();
+
+                if self.display_items.items.len() == 1 {
+                    self.display_items.state.select(Some(0));
+                    self.deeper();
+                }
+            }
         }
     }
 
     pub fn higher(&mut self) {
-        self.selected_parents.pop();
-        self.current_depth = self.current_depth - 1;
-        self.init_display_items();
+        if self.current_depth > 0 {
+            self.selected_parents.pop();
+            self.current_depth = self.current_depth - 1;
+            self.init_display_items();
+        }
     }
 
     pub fn load_input(&mut self, input: &Input) {
@@ -79,6 +88,7 @@ impl App {
             .clone();
 
         self.init_display_items();
+        self.update_max_depth();
     }
 }
 
@@ -121,6 +131,12 @@ impl<T> StatefulList<T> {
 }
 
 impl App {
+    fn update_max_depth(&mut self) {
+        self.max_depth = self.complex_objects
+            .iter()
+            .fold(0, |acc, item| if item.depth > acc { item.depth } else { acc });
+    }
+
     fn init_display_items(&mut self) {
         let complex_objects: Vec<ComplexObject> = self.complex_objects
             .iter()
