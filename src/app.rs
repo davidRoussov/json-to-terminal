@@ -238,11 +238,13 @@ impl App {
             .collect();
 
         let list = RList::new(items)
-            .block(Block::default())
-            .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>")
-            .repeat_highlight_symbol(true)
+            .block(
+                Block::new()
+                    .borders(Borders::NONE)
+                    .padding(Padding::vertical(1))
+            )
+            .highlight_symbol(">")
+            .repeat_highlight_symbol(false)
             .direction(ListDirection::TopToBottom);
 
         StatefulWidget::render(list, area, buf, &mut self.display_items.state);
