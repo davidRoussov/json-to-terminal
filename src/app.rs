@@ -8,16 +8,27 @@ use ratatui::{widgets::List as RList};
 use ratatui::{widgets::ListItem as RListItem};
 use textwrap;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::input::{Input, ComplexType, ComplexObject};
 use crate::session::{Session};
 
 const DEFAULT_DEPTH: u16 = 1;
+const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FFFFFF"; // white
+const DEFAULT_SECONDARY_COLOR_HEX: &str = "#00FF00"; // green
+const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000000"; // black
+
+pub struct ColorPalette {
+    pub primary_hex: String,
+    pub secondary_hex: String,
+    pub background_hex: String,
+}
 
 pub struct App {
     pub should_quit: bool,
     pub session: Session,
     pub display_items: StatefulList<ComplexObject>,
+    pub color_palette: ColorPalette,
     complex_types: Vec<ComplexType>,
     complex_objects: Vec<ComplexObject>,
     current_depth: u16,
@@ -44,6 +55,11 @@ impl App {
             current_depth: DEFAULT_DEPTH,
             selected_parents: Vec::new(),
             max_depth: 0,
+            color_palette: ColorPalette {
+                primary_hex: DEFAULT_PRIMARY_COLOR_HEX.to_string(),
+                secondary_hex: DEFAULT_SECONDARY_COLOR_HEX.to_string(),
+                background_hex: DEFAULT_BACKGROUND_COLOR_HEX.to_string(),
+            }
         }
     }
 
@@ -195,17 +211,41 @@ impl App {
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([
+            Constraint::Length(4),
             Constraint::Min(0),
         ]);
 
-        let [body_area] = vertical.areas(area);
+        let [header_area, body_area] = vertical.areas(area);
 
+        self.render_header(header_area, buf);
         self.render_body(body_area, buf);
     }
 }
 
 impl App {
+    fn render_header(&mut self, area: Rect, buf: &mut Buffer) {
+        let color: Color = Color::from_str(&self.color_palette.primary_hex).unwrap();
+        let span: Span = Span::styled(
+            "Document title".to_string(),
+            Style::new()
+                .fg(color)
+        ).into();
+
+        Paragraph::new(span)
+            .block(
+                Block::default()
+                   .borders(Borders::ALL)
+                   .title("Document")
+                   .border_style(
+                        Style::new()
+                            .fg(color)
+                   )
+            )
+            .render(area, buf);
+    }
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
+        let color: Color = Color::from_str(&self.color_palette.secondary_hex).unwrap();
+
         let items: Vec<RListItem> = self.display_items.items
             .clone()
             .iter()
@@ -224,7 +264,7 @@ impl App {
                     let span: Span = Span::styled(
                         segment.to_string(),
                         Style::new()
-                            .fg(Color::Green)
+                            .fg(color)
                     ).into();
                     lines.push(Line::from(span));
                 }

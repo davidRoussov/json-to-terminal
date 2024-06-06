@@ -1,6 +1,7 @@
 use crossterm::{
     event::{self, Event, KeyCode::Char, KeyCode},
     execute,
+    style::{Color, SetBackgroundColor},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{prelude::*, widgets::*};
@@ -36,6 +37,7 @@ fn startup() -> Result<()> {
 }
 
 fn shutdown() -> Result<()> {
+    execute!(std::io::stdout(), SetBackgroundColor(Color::Reset));
     execute!(std::io::stderr(), LeaveAlternateScreen)?;
     disable_raw_mode()?;
     Ok(())
@@ -45,7 +47,11 @@ fn run(input: &Input) -> Result<Session> {
     let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
 
     let mut app = App::new();
+
     app.load_input(input);
+
+    let background_hex = app.color_palette.background_hex.clone();
+    let color: Color = parse_hex_color(&background_hex).expect("Could not parse hex colour code");
 
     loop {
         t.draw(|f| {
@@ -57,6 +63,8 @@ fn run(input: &Input) -> Result<Session> {
         if app.should_quit {
             break;
         }
+
+        execute!(std::io::stdout(), SetBackgroundColor(color));
     }
 
     Ok(app.get_session())
@@ -85,4 +93,20 @@ fn update(app: &mut App) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn parse_hex_color(hex_color_str: &str) -> Result<Color> {
+    let hex_color_str = if hex_color_str.starts_with('#') {
+        &hex_color_str[1..]
+    } else {
+        hex_color_str
+    };
+
+    let hex_color = u32::from_str_radix(hex_color_str, 16)?;
+
+    Ok(Color::Rgb {
+        r: ((hex_color >> 16) & 0xFF) as u8,
+        g: ((hex_color >> 8) & 0xFF) as u8,
+        b: (hex_color & 0xFF) as u8,
+    })
 }
