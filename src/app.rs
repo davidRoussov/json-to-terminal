@@ -14,9 +14,13 @@ use crate::input::{Input, ComplexType, ComplexObject};
 use crate::session::{Session};
 
 const DEFAULT_DEPTH: u16 = 1;
-const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FFFFFF"; // white
-const DEFAULT_SECONDARY_COLOR_HEX: &str = "#00FF00"; // green
-const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000000"; // black
+//const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FFFFFF"; // white
+//const DEFAULT_SECONDARY_COLOR_HEX: &str = "#00FF00"; // green
+//const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000000"; // black
+
+const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FF6600";
+const DEFAULT_SECONDARY_COLOR_HEX: &str = "#828282";
+const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#F6F6EF";
 
 pub struct ColorPalette {
     pub primary_hex: String,
@@ -211,7 +215,7 @@ impl App {
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([
-            Constraint::Length(4),
+            Constraint::Length(3),
             Constraint::Min(0),
         ]);
 
@@ -224,27 +228,30 @@ impl Widget for &mut App {
 
 impl App {
     fn render_header(&mut self, area: Rect, buf: &mut Buffer) {
-        let color: Color = Color::from_str(&self.color_palette.primary_hex).unwrap();
+        let text_color: Color = Color::from_str("#111111").unwrap();
+
         let span: Span = Span::styled(
             "Document title".to_string(),
             Style::new()
-                .fg(color)
+                .fg(text_color)
+
         ).into();
+
+        let color: Color = Color::from_str(&self.color_palette.primary_hex).unwrap();
 
         Paragraph::new(span)
             .block(
                 Block::default()
-                   .borders(Borders::ALL)
-                   .title("Document")
-                   .border_style(
-                        Style::new()
-                            .fg(color)
-                   )
+                    .style(
+                        Style::default()
+                            .bg(color)
+                    )
             )
             .render(area, buf);
     }
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
-        let color: Color = Color::from_str(&self.color_palette.secondary_hex).unwrap();
+        let text_color: Color = Color::from_str(&self.color_palette.secondary_hex).unwrap();
+        let background_color: Color = Color::from_str(&self.color_palette.background_hex).unwrap();
 
         let items: Vec<RListItem> = self.display_items.items
             .clone()
@@ -264,7 +271,8 @@ impl App {
                     let span: Span = Span::styled(
                         segment.to_string(),
                         Style::new()
-                            .fg(color)
+                            .fg(text_color)
+                            .bg(background_color)
                     ).into();
                     lines.push(Line::from(span));
                 }
@@ -275,6 +283,7 @@ impl App {
                         Style::new()
                             .add_modifier(Modifier::BOLD)
                             .fg(Color::Red)
+                            .bg(background_color)
                     ).into();
                     lines.push(Line::from(span));
                 }
@@ -290,6 +299,10 @@ impl App {
                 Block::new()
                     .borders(Borders::NONE)
                     .padding(Padding::vertical(1))
+                    .border_style(
+                         Style::new()
+                             .bg(background_color)
+                    )
             )
             .highlight_symbol(">")
             .repeat_highlight_symbol(false)

@@ -2,7 +2,7 @@ use crossterm::{
     event::{self, Event, KeyCode::Char, KeyCode},
     execute,
     style::{Color, SetBackgroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
 };
 use ratatui::{prelude::*, widgets::*};
 use ratatui::{widgets::List as RList};
@@ -53,6 +53,12 @@ fn run(input: &Input) -> Result<Session> {
     let background_hex = app.color_palette.background_hex.clone();
     let color: Color = parse_hex_color(&background_hex).expect("Could not parse hex colour code");
 
+    execute!(
+        std::io::stdout(),
+        SetBackgroundColor(color),
+        Clear(ClearType::All)
+    );
+
     loop {
         t.draw(|f| {
             f.render_widget(&mut app, f.size());
@@ -63,8 +69,6 @@ fn run(input: &Input) -> Result<Session> {
         if app.should_quit {
             break;
         }
-
-        execute!(std::io::stdout(), SetBackgroundColor(color));
     }
 
     Ok(app.get_session())
