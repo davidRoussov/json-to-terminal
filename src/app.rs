@@ -14,13 +14,10 @@ use crate::input::{Input, ComplexType, ComplexObject};
 use crate::session::{Session};
 
 const DEFAULT_DEPTH: u16 = 1;
-//const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FFFFFF"; // white
-//const DEFAULT_SECONDARY_COLOR_HEX: &str = "#00FF00"; // green
-//const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000000"; // black
 
-const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FF6600";
-const DEFAULT_SECONDARY_COLOR_HEX: &str = "#828282";
-const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#F6F6EF";
+const DEFAULT_PRIMARY_COLOR_HEX: &str = "#00FF00"; // green
+const DEFAULT_SECONDARY_COLOR_HEX: &str = "#FFFFFF"; // white
+const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000011"; // black
 
 pub struct ColorPalette {
     pub primary_hex: String,

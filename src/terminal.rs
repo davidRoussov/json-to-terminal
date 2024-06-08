@@ -47,7 +47,6 @@ fn run(input: &Input) -> Result<Session> {
     let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
 
     let mut app = App::new();
-
     app.load_input(input);
 
     let background_hex = app.color_palette.background_hex.clone();
