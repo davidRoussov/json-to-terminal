@@ -186,11 +186,11 @@ impl App {
                     }
                 }
 
-                let complex_string = complex_object_to_string(item.clone().clone(), &self.complex_objects);
+                //let complex_string = complex_object_to_string(item.clone().clone(), &self.complex_objects, 0);
 
-                if complex_string.is_empty() {
-                    return false;
-                }
+                //if complex_string.is_empty() {
+                //    return false;
+                //}
 
                 true
             })
@@ -255,7 +255,7 @@ impl App {
             .iter()
             .map(|item| {
                 let mut lines: Vec<Line> = Vec::new();
-                let complex_string = complex_object_to_string(item.clone(), &self.complex_objects);
+                let complex_string = complex_object_to_string(item.clone(), &self.complex_types, &self.complex_objects, 0);
                 let mut wrapped_string = textwrap::wrap(&complex_string, &textwrap::Options::new(160));
                 let mut truncated = false;
 
@@ -309,7 +309,149 @@ impl App {
     }
 }
 
-fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> String {
+fn complex_object_to_string(complex_object: ComplexObject, complex_types: &Vec<ComplexType>, complex_objects: &Vec<ComplexObject>, relative_depth: u16) -> String {
+    let mut result: String = complex_object.values
+        .values()
+        .enumerate()
+        .fold(String::new(), |mut acc, (index, item)| {
+            if item.get("is_url").unwrap() == "true" || item.get("is_decorative").unwrap() == "true" || item.get("is_id").unwrap() == "true" {
+                acc
+            } else {
+                acc + " " + item.get("value").unwrap().trim()
+            }
+        });
+
+    if relative_depth > 3 {
+        result = result + "...";
+        return result;
+    }
+
+    let child_objects: Vec<Option<&ComplexObject>> = complex_object.complex_objects
+        .iter()
+        .map(|id| {
+            complex_objects
+                .iter()
+                .find(|item| item.id == *id)
+        })
+        .collect();
+
+    if relative_depth > 0 {
+        let child_types: HashMap<String, u16> = child_objects.iter().fold(HashMap::new(), |mut acc, item| {
+            if let Some(item) = item {
+                let complex_type = complex_types.iter().find(|t| t.id == item.type_id).unwrap();
+                let counter = acc.entry(complex_type.name.clone()).or_insert(0);
+                *counter += 1;
+            }
+
+            acc
+        });
+
+        let mut sorted_keys: Vec<&String> = child_types.keys().collect();
+        sorted_keys.sort();
+
+        for complex_type_name in sorted_keys {
+            let complex_type_count = child_types.get(complex_type_name).unwrap();
+            result.push_str(&format!("{} x {} ", complex_type_name, complex_type_count))
+        }
+    }
+
+    for child_object in child_objects.iter() {
+        if let Some(child_object) = child_object {
+
+            let type_count = child_objects.iter().fold(0, |acc, item| {
+                if let Some(item) = item {
+                    if item.type_id == child_object.type_id {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                } else {
+                    acc
+                }
+            });
+
+            if type_count > 1 && relative_depth > 0 {
+
+            } else {
+                result.push_str(
+                    &complex_object_to_string(child_object.clone().clone(), complex_types, complex_objects, relative_depth + 1)
+                );
+            }
+
+        }
+    }
+
+    result
+}
+
+fn complex_object_to_string3(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>, relative_depth: u16) -> String {
+    let mut result: String = complex_object.values
+        .values()
+        .enumerate()
+        .fold(String::new(), |mut acc, (index, item)| {
+            if item.get("is_url").unwrap() == "true" || item.get("is_decorative").unwrap() == "true" || item.get("is_id").unwrap() == "true" {
+                acc
+            } else {
+                acc + " " + item.get("value").unwrap().trim()
+            }
+        });
+
+    let child_objects: Vec<Option<&ComplexObject>> = complex_object.complex_objects
+        .iter()
+        .map(|id| {
+            complex_objects
+                .iter()
+                .find(|item| item.id == *id)
+        })
+        .collect();
+
+    if relative_depth > 0 {
+
+
+        for child_object in child_objects.iter() {
+
+            if let Some(child_object) = child_object {
+
+                let type_count = child_objects.iter().fold(0, |acc, item| {
+                    if let Some(item) = item {
+                        if item.type_id == child_object.type_id {
+                            acc + 1
+                        } else {
+                            acc
+                        }
+                    } else {
+                        acc
+                    }
+                });
+
+                if type_count == 1 {
+                    result.push_str(
+                        &complex_object_to_string3(child_object.clone().clone(), complex_objects, relative_depth + 1)
+                    );
+                }
+
+            }
+
+        }
+
+    } else {
+
+        for child_object in child_objects.iter() {
+
+            if let Some(child_object) = child_object {
+                result.push_str(
+                    &complex_object_to_string3(child_object.clone().clone(), complex_objects, relative_depth + 1)
+                );
+            }
+
+        }
+
+    }
+
+    result
+}
+
+fn complex_object_to_string2(complex_object: ComplexObject, complex_objects: &Vec<ComplexObject>) -> String {
     let mut result: String = complex_object.values
         .values()
         .enumerate()
@@ -328,7 +470,7 @@ fn complex_object_to_string(complex_object: ComplexObject, complex_objects: &Vec
 
         if let Some(child_object) = child_object {
             result.push_str(
-                &complex_object_to_string(child_object.clone(), complex_objects)
+                &complex_object_to_string2(child_object.clone(), complex_objects)
             );
         }
     }
