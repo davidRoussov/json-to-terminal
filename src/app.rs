@@ -13,7 +13,8 @@ use std::str::FromStr;
 use crate::input::{Input};
 use crate::session::{Session};
 
-const DEFAULT_DEPTH: u16 = 1;
+const DEFAULT_DEPTH: usize = 1;
+const DEFAULT_RANGE: usize = 3;
 
 const DEFAULT_PRIMARY_COLOR_HEX: &str = "#00FF00"; // green
 const DEFAULT_SECONDARY_COLOR_HEX: &str = "#FFFFFF"; // white
@@ -30,15 +31,12 @@ pub struct App {
     pub session: Session,
     pub display_items: StatefulList<ComplexObject>,
     pub color_palette: ColorPalette,
-    current_depth: u16,
+    current_depth: usize,
+    current_range: usize,
     input: Option<Input>,
 }
 
-#[derive(Clone, Debug)]
-pub struct ComplexObject {
-    key: String,
-    value: String,
-}
+type ComplexObject = HashMap<String, String>;
 
 pub struct StatefulList<T> {
     state: ListState,
@@ -55,6 +53,7 @@ impl App {
                 depth: DEFAULT_DEPTH,
             },
             current_depth: DEFAULT_DEPTH,
+            current_range: DEFAULT_RANGE,
             color_palette: ColorPalette {
                 primary_hex: DEFAULT_PRIMARY_COLOR_HEX.to_string(),
                 secondary_hex: DEFAULT_SECONDARY_COLOR_HEX.to_string(),
@@ -70,12 +69,26 @@ impl App {
 
     pub fn deeper(&mut self) {
         self.current_depth = self.current_depth + 1;
+        self.init_display_items();
     }
 
     pub fn higher(&mut self) {
         if self.current_depth > 0 {
             self.current_depth = self.current_depth - 1;
+            self.init_display_items();
         }
+    }
+    
+    pub fn closer(&mut self) {
+        if self.current_range > 0 {
+            self.current_range = self.current_range - 1;
+            self.init_display_items();
+        }
+    }
+
+    pub fn farther(&mut self) {
+        self.current_range = self.current_range + 1;
+        self.init_display_items();
     }
 
     pub fn get_session(&self) -> Session {
@@ -138,6 +151,19 @@ impl<T> StatefulList<T> {
 
 impl App {
     fn init_display_items(&mut self) {
+        let mut results = Vec::new();
+        self.input
+            .clone()
+            .unwrap()
+            .go_down_depth(
+                self.current_depth,
+                self.current_range,
+                &mut results
+            );
+
+        log::debug!("results: {:?}", results);
+
+        self.display_items = StatefulList::<ComplexObject>::with_items(results);
     }
 
     fn get_current_object(&mut self) -> Option<ComplexObject> {
@@ -188,8 +214,36 @@ impl App {
     }
 
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
+        let text_color: Color = Color::from_str(&self.color_palette.secondary_hex).unwrap();
         let background_color: Color = Color::from_str(&self.color_palette.background_hex).unwrap();
-        let items: Vec<RListItem> = Vec::new();
+
+        let items: Vec<RListItem> = self.display_items.items
+            .clone()
+            .iter()
+            .map(|item| {
+
+                let mut lines: Vec<Line> = Vec::new();
+
+                let text = item.iter()
+                    .fold(String::new(), |mut acc, (key, value)| {
+                        acc.push_str(&format!(" {}: {}\n", key, value));
+                        acc
+                    });
+
+                let span: Span = Span::styled(
+                    text,
+                    Style::new()
+                        .fg(text_color)
+                        .bg(background_color)
+                ).into();
+
+                lines.push(Line::from(span));
+
+                RListItem::new(lines)
+
+            })
+            .collect();
+
         let list = RList::new(items)
             .block(
                 Block::new()
@@ -207,4 +261,3 @@ impl App {
         StatefulWidget::render(list, area, buf, &mut self.display_items.state);
     }
 }
-

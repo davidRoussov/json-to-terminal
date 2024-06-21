@@ -89,6 +89,12 @@ fn update(app: &mut App) -> Result<()> {
                     KeyCode::Backspace => {
                         app.higher();
                     },
+                    KeyCode::Tab => {
+                        app.farther();
+                    },
+                    KeyCode::Esc => {
+                        app.closer();
+                    },
                     _ => {},
                 }
             }
