@@ -18,8 +18,8 @@ impl Input {
         }
     }
 
-    pub fn to_string(&self, relative_depth: usize, result: &mut String) {
-        let indentation = format!("\n{}", " ".repeat(relative_depth * 2));
+    pub fn to_string(&self, indentation_factor: usize, result: &mut String) {
+        let indentation = format!("\n{}", " ".repeat(indentation_factor));
 
         let mut keys: Vec<_> = self.values.keys().collect();
         keys.sort();
@@ -35,7 +35,8 @@ impl Input {
         result.push_str(&text);
 
         for child in &self.children {
-            child.to_string(relative_depth + 1, result);
+            let new_depth = if values.is_empty() { indentation_factor } else { indentation_factor + 1 };
+            child.to_string(new_depth, result);
         }
     }
 }
