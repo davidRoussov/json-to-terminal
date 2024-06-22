@@ -8,27 +8,29 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn go_down_depth(&self, depth: usize, range: usize, results: &mut Vec<HashMap<String, String>>) {
+    pub fn go_down_depth(&self, depth: usize, results: &mut Vec<Input>) {
         if depth == 0 {
-            self.go_down_range(range, results);
+            results.push(self.clone());
         } else {
             for child in &self.children {
-                child.go_down_depth(depth - 1, range, results);
+                child.go_down_depth(depth - 1, results);
             }
         }
     }
 
-    pub fn go_down_range(&self, range: usize, results: &mut Vec<HashMap<String, String>>) {
-        if range == 0 {
-            return;
-        }
+    pub fn to_string(&self, relative_depth: usize, result: &mut String) {
+        let indentation = format!("\n{}", " ".repeat(relative_depth * 2));
+        let values = self.values.iter()
+            .fold(String::new(), |mut acc, (_key, value)| {
+                acc.push_str(&format!(" {}", value));
+                acc
+            });
+        let text = format!("{}{}", indentation, values);
 
-        if !self.values.is_empty() {
-            results.push(self.values.clone());
-        }
+        result.push_str(&text);
 
         for child in &self.children {
-            child.go_down_range(range - 1, results);
+            child.to_string(relative_depth + 1, result);
         }
     }
 }

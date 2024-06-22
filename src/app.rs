@@ -36,7 +36,7 @@ pub struct App {
     input: Option<Input>,
 }
 
-type ComplexObject = HashMap<String, String>;
+type ComplexObject = Input;
 
 pub struct StatefulList<T> {
     state: ListState,
@@ -157,11 +157,8 @@ impl App {
             .unwrap()
             .go_down_depth(
                 self.current_depth,
-                self.current_range,
                 &mut results
             );
-
-        log::debug!("results: {:?}", results);
 
         self.display_items = StatefulList::<ComplexObject>::with_items(results);
     }
@@ -221,14 +218,12 @@ impl App {
             .clone()
             .iter()
             .map(|item| {
-
                 let mut lines: Vec<Line> = Vec::new();
 
-                let text = item.iter()
-                    .fold(String::new(), |mut acc, (key, value)| {
-                        acc.push_str(&format!(" {}: {}\n", key, value));
-                        acc
-                    });
+                let mut text = String::new();
+                item.to_string(0, &mut text);
+
+                log::debug!("text: {}", text);
 
                 let span: Span = Span::styled(
                     text,
