@@ -235,9 +235,9 @@ impl App {
                     lines.push(Line::from(span));
                 }
 
-                //lines.push(
-                //    Line::from("".to_string())
-                //);
+                lines.push(
+                    Line::from("".to_string())
+                );
 
                 RListItem::new(lines)
 

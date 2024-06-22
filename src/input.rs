@@ -19,23 +19,24 @@ impl Input {
     }
 
     pub fn to_string(&self, indentation_factor: usize, result: &mut String) {
-        let indentation = format!("\n{}", " ".repeat(indentation_factor));
-
         let mut keys: Vec<_> = self.values.keys().collect();
         keys.sort();
 
-        let values = keys.iter()
-            .fold(String::new(), |mut acc, key| {
-                let value = self.values.get(*key).unwrap();
-                acc.push_str(&format!(" {}", value));
-                acc
-            });
-        let text = format!("{}{}", indentation, values);
+        if !keys.is_empty() {
+            let indentation = format!("{}{}", if !result.is_empty() { "\n" } else { "" }, " ".repeat(indentation_factor));
+            let values = keys.iter()
+                .fold(String::new(), |mut acc, key| {
+                    let value = self.values.get(*key).unwrap();
+                    acc.push_str(&format!(" {}", value));
+                    acc
+                });
+            let text = format!("{}{}", indentation, values);
 
-        result.push_str(&text);
+            result.push_str(&text);
+        }
 
         for child in &self.children {
-            let new_depth = if values.is_empty() { indentation_factor } else { indentation_factor + 1 };
+            let new_depth = if keys.is_empty() { indentation_factor } else { indentation_factor + 1 };
             child.to_string(new_depth, result);
         }
     }
