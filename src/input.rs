@@ -27,7 +27,8 @@ impl Input {
             let values = keys.iter()
                 .fold(String::new(), |mut acc, key| {
                     let value = self.values.get(*key).unwrap();
-                    acc.push_str(&format!(" {}", value));
+                    let trimmed = value.trim();
+                    acc.push_str(&format!(" {}", trimmed));
                     acc
                 });
             let text = format!("{}{}", indentation, values);
