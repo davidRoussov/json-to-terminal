@@ -223,16 +223,21 @@ impl App {
                 let mut text = String::new();
                 item.to_string(0, &mut text);
 
-                log::debug!("text: {}", text);
+                let mut wrapped_string = textwrap::wrap(&text, &textwrap::Options::new(160));
 
-                let span: Span = Span::styled(
-                    text,
-                    Style::new()
-                        .fg(text_color)
-                        .bg(background_color)
-                ).into();
+                for segment in wrapped_string.iter() {
+                    let span: Span = Span::styled(
+                        segment.to_string(),
+                        Style::new()
+                            .fg(text_color)
+                            .bg(background_color)
+                    ).into();
+                    lines.push(Line::from(span));
+                }
 
-                lines.push(Line::from(span));
+                //lines.push(
+                //    Line::from("".to_string())
+                //);
 
                 RListItem::new(lines)
 

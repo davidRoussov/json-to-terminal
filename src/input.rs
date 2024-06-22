@@ -20,8 +20,13 @@ impl Input {
 
     pub fn to_string(&self, relative_depth: usize, result: &mut String) {
         let indentation = format!("\n{}", " ".repeat(relative_depth * 2));
-        let values = self.values.iter()
-            .fold(String::new(), |mut acc, (_key, value)| {
+
+        let mut keys: Vec<_> = self.values.keys().collect();
+        keys.sort();
+
+        let values = keys.iter()
+            .fold(String::new(), |mut acc, key| {
+                let value = self.values.get(*key).unwrap();
                 acc.push_str(&format!(" {}", value));
                 acc
             });
