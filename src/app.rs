@@ -175,7 +175,7 @@ impl App {
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([
-            Constraint::Length(3),
+            Constraint::Length(1),
             Constraint::Min(0),
         ]);
 
@@ -218,13 +218,21 @@ impl App {
             .clone()
             .iter()
             .map(|item| {
-                let mut lines: Vec<Line> = Vec::new();
-
                 let mut text = String::new();
                 item.to_string(0, &mut text);
+                text
+            })
+            .filter(|item| {
+                !item.is_empty()
+            })
+            .map(|item| {
+                let mut lines: Vec<Line> = Vec::new();
 
-                let mut wrapped_string = textwrap::wrap(&text, &textwrap::Options::new(160));
+                let mut wrapped_string = textwrap::wrap(&item, &textwrap::Options::new(160));
 
+                if wrapped_string.len() > 20 {
+                    wrapped_string.truncate(20);
+                }
                 for segment in wrapped_string.iter() {
                     let span: Span = Span::styled(
                         segment.to_string(),
