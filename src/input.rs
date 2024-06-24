@@ -36,25 +36,29 @@ impl Input {
     }
 
     pub fn to_string(&self, indentation_factor: usize, result: &mut String) {
-        if !self.values.is_empty() {
-            let indentation = format!("{}{}", if !result.is_empty() { "\n" } else { "" }, " ".repeat(indentation_factor));
-            let values = self.values.iter()
-                .filter(|item| {
-                    !item.meta.is_id && !item.meta.is_action_link
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .sorted_by(|a, b| {
-                    a.name.cmp(&b.name)
-                })
-                .fold(String::new(), |mut acc, item| {
-                    let trimmed = item.value.trim();
-                    acc.push_str(&format!(" {}", trimmed));
-                    acc
-                });
-            let text = format!("{}{}", indentation, values);
+        let indentation = format!("{}{}", if !result.is_empty() { "\n" } else { "" }, " ".repeat(indentation_factor * 2));
+        let values = self.values.iter()
+            .filter(|item| {
+                !item.meta.is_id && !item.meta.is_action_link
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .sorted_by(|a, b| {
+                a.name.cmp(&b.name)
+            })
+            .fold(String::new(), |mut acc, item| {
+                let trimmed = item.value.trim();
+                acc.push_str(&format!(" {}", trimmed));
+                acc
+            });
 
-            result.push_str(&text);
+        if !values.is_empty() {
+            if result.is_empty() {
+                result.push_str(&values);
+            } else {
+                let text = format!("{}{}", indentation, values);
+                result.push_str(&text);
+            }
         }
 
         for child in &self.children {
