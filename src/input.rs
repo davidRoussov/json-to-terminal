@@ -48,7 +48,11 @@ impl Input {
             })
             .fold(String::new(), |mut acc, item| {
                 let trimmed = item.value.trim();
-                acc.push_str(&format!(" {}", trimmed));
+                if acc.is_empty() {
+                    acc.push_str(&format!("{}", trimmed));
+                } else {
+                    acc.push_str(&format!(" • {}", trimmed));
+                }
                 acc
             });
 

@@ -16,9 +16,13 @@ use crate::session::{Session};
 const DEFAULT_DEPTH: usize = 1;
 const DEFAULT_RANGE: usize = 3;
 
-const DEFAULT_PRIMARY_COLOR_HEX: &str = "#00FF00"; // green
-const DEFAULT_SECONDARY_COLOR_HEX: &str = "#FFFFFF"; // white
-const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000011"; // black
+//const DEFAULT_PRIMARY_COLOR_HEX: &str = "#00FF00"; // green
+//const DEFAULT_SECONDARY_COLOR_HEX: &str = "#FFFFFF"; // white
+//const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#000011"; // black
+
+const DEFAULT_PRIMARY_COLOR_HEX: &str = "#FF6600";
+const DEFAULT_SECONDARY_COLOR_HEX: &str = "#828282";
+const DEFAULT_BACKGROUND_COLOR_HEX: &str = "#F6F6EF";
 
 pub struct ColorPalette {
     pub primary_hex: String,
@@ -257,9 +261,10 @@ impl App {
                 Block::new()
                     .borders(Borders::NONE)
                     .padding(Padding::vertical(1))
-                    .border_style(
-                         Style::new()
-                             .bg(background_color)
+                    .style(
+                        Style::new()
+                            .fg(text_color)
+                            .bg(background_color)
                     )
             )
             .highlight_symbol(">")
