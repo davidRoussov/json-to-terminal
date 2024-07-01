@@ -4,7 +4,7 @@ use itertools::Itertools;
 use std::cmp::Ordering;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct InputMetadata {
+pub struct DataMetadata {
     pub is_id: bool,
     pub is_url: bool,
     pub is_page_link: bool,
@@ -12,20 +12,31 @@ pub struct InputMetadata {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct InputValue {
-    pub meta: InputMetadata,
+pub struct DataValue {
+    pub meta: DataMetadata,
     pub name: String,
     pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Input {
-    pub values: Vec<InputValue>,
-    pub children: Vec<Input>,
+pub struct Data {
+    pub values: Vec<DataValue>,
+    pub children: Vec<Data>,
 }
 
-impl Input {
-    pub fn go_down_depth(&self, depth: usize, results: &mut Vec<Input>) {
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Metadata {
+    pub title: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Input {
+    pub data: Data,
+    pub metadata: Metadata,
+}
+
+impl Data {
+    pub fn go_down_depth(&self, depth: usize, results: &mut Vec<Data>) {
         if depth == 0 {
             results.push(self.clone());
         } else {

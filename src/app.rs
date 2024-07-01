@@ -10,7 +10,7 @@ use textwrap;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::input::{Input};
+use crate::input::{Input, Data};
 use crate::session::{Session};
 
 const DEFAULT_DEPTH: usize = 1;
@@ -40,7 +40,7 @@ pub struct App {
     input: Option<Input>,
 }
 
-type ComplexObject = Input;
+type ComplexObject = Data;
 
 pub struct StatefulList<T> {
     state: ListState,
@@ -159,6 +159,7 @@ impl App {
         self.input
             .clone()
             .unwrap()
+            .data
             .go_down_depth(
                 self.current_depth,
                 &mut results
@@ -194,8 +195,10 @@ impl App {
     fn render_header(&mut self, area: Rect, buf: &mut Buffer) {
         let text_color: Color = Color::from_str("#111111").unwrap();
 
+        let text = self.input.as_ref().unwrap().metadata.title.clone();
+
         let span: Span = Span::styled(
-            "Document title".to_string(),
+            text,
             Style::new()
                 .fg(text_color)
 
@@ -234,8 +237,8 @@ impl App {
 
                 let mut wrapped_string = textwrap::wrap(&item, &textwrap::Options::new(160));
 
-                if wrapped_string.len() > 20 {
-                    wrapped_string.truncate(20);
+                if wrapped_string.len() > 40 {
+                    wrapped_string.truncate(40);
                 }
                 for segment in wrapped_string.iter() {
                     let span: Span = Span::styled(
