@@ -248,6 +248,10 @@ impl App {
                     );
                 }
 
+                if lines.len() > 20 {
+                    lines.truncate(20);
+                }
+
                 lines
             })
             .filter(|item| {
