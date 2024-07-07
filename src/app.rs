@@ -242,11 +242,19 @@ impl App {
                     &mut lines
                 );
 
-                lines.push(
-                    Line::from("".to_string())
-                );
+                if lines.len() > 0 {
+                    lines.push(
+                        Line::from("".to_string())
+                    );
+                }
 
-                RListItem::new(lines)
+                lines
+            })
+            .filter(|item| {
+                item.len() > 0
+            })
+            .map(|item| {
+                RListItem::new(item)
             })
             .collect();
 
