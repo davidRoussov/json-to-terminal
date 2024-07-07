@@ -224,6 +224,7 @@ impl App {
     }
 
     fn render_body(&mut self, area: Rect, buf: &mut Buffer) {
+        let main_content_color: Color = Color::from_str("#111111").unwrap();
         let text_color: Color = Color::from_str(&self.color_palette.secondary_hex).unwrap();
         let background_color: Color = Color::from_str(&self.color_palette.background_hex).unwrap();
 
@@ -231,37 +232,21 @@ impl App {
             .clone()
             .iter()
             .map(|item| {
-                let mut text = String::new();
-                item.to_string(&self.should_display_primary_content, 0, &mut text);
-                text
-            })
-            .filter(|item| {
-                !item.is_empty()
-            })
-            .map(|item| {
                 let mut lines: Vec<Line> = Vec::new();
 
-                let mut wrapped_string = textwrap::wrap(&item, &textwrap::Options::new(160));
-
-                if wrapped_string.len() > 40 {
-                    wrapped_string.truncate(40);
-                }
-                for segment in wrapped_string.iter() {
-                    let span: Span = Span::styled(
-                        segment.to_string(),
-                        Style::new()
-                            .fg(text_color)
-                            .bg(background_color)
-                    ).into();
-                    lines.push(Line::from(span));
-                }
+                item.to_lines(
+                    &self.should_display_primary_content,
+                    &main_content_color,
+                    &text_color,
+                    &background_color,
+                    &mut lines
+                );
 
                 lines.push(
                     Line::from("".to_string())
                 );
 
                 RListItem::new(lines)
-
             })
             .collect();
 
