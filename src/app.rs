@@ -32,6 +32,7 @@ pub struct ColorPalette {
 
 pub struct App {
     pub should_quit: bool,
+    pub should_display_primary_content: bool,
     pub session: Session,
     pub display_items: StatefulList<ComplexObject>,
     pub color_palette: ColorPalette,
@@ -52,6 +53,7 @@ impl App {
     pub fn new() -> App {
         App {
             should_quit: false,
+            should_display_primary_content: true,
             display_items: StatefulList::<ComplexObject>::with_items(Vec::new()),
             session: Session {
                 depth: DEFAULT_DEPTH,
@@ -69,6 +71,10 @@ impl App {
 
     pub fn quit(&mut self) {
         self.should_quit = true;
+    }
+    
+    pub fn toggle_primary_content(&mut self) {
+        self.should_display_primary_content = !self.should_display_primary_content;
     }
 
     pub fn deeper(&mut self) {
@@ -226,7 +232,7 @@ impl App {
             .iter()
             .map(|item| {
                 let mut text = String::new();
-                item.to_string(0, &mut text);
+                item.to_string(&self.should_display_primary_content, 0, &mut text);
                 text
             })
             .filter(|item| {

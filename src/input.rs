@@ -9,6 +9,7 @@ pub struct DataMetadata {
     pub is_url: bool,
     pub is_page_link: bool,
     pub is_action_link: bool,
+    pub is_primary_content: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -46,11 +47,15 @@ impl Data {
         }
     }
 
-    pub fn to_string(&self, indentation_factor: usize, result: &mut String) {
+    pub fn to_string(&self, filter_secondary_content: &bool, indentation_factor: usize, result: &mut String) {
         let indentation = format!("{}{}", if !result.is_empty() { "\n" } else { "" }, " ".repeat(indentation_factor * 2));
         let values = self.values.iter()
             .filter(|item| {
-                !item.meta.is_id && !item.meta.is_action_link
+                if *filter_secondary_content {
+                    item.meta.is_primary_content && !item.meta.is_id && !item.meta.is_action_link
+                } else {
+                    !item.meta.is_primary_content && !item.meta.is_id && !item.meta.is_action_link
+                }
             })
             .collect::<Vec<_>>()
             .into_iter()
@@ -78,7 +83,7 @@ impl Data {
 
         for child in &self.children {
             let indentation_factor = if self.values.is_empty() { indentation_factor } else { indentation_factor + 1 };
-            child.to_string(indentation_factor, result);
+            child.to_string(filter_secondary_content, indentation_factor, result);
         }
     }
 }

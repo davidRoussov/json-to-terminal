@@ -83,6 +83,7 @@ fn update(app: &mut App) -> Result<()> {
                     Char('G') => app.display_items.end(),
                     Char('j') => app.display_items.next(),
                     Char('k') => app.display_items.previous(),
+                    Char('p') => app.toggle_primary_content(),
                     KeyCode::Enter => {
                         app.deeper();
                     },
