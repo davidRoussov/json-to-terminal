@@ -61,10 +61,10 @@ impl Data {
         let values: Vec<DataValue> = self.values.iter()
             .filter(|item| {
                 if *filter_secondary_content {
-                    item.meta.is_primary_content && !item.meta.is_id && !item.meta.is_action_link
-                } else {
-                    !item.meta.is_primary_content && !item.meta.is_id && !item.meta.is_action_link
+                    return item.meta.is_primary_content && !item.meta.is_id && !item.meta.is_action_link;
                 }
+
+                !item.meta.is_id && !item.meta.is_action_link
             })
             .collect::<Vec<_>>()
             .into_iter()
@@ -93,7 +93,6 @@ impl Data {
                 .map(|span| span.content.len()).sum();
 
             if value.len() > 160 {
-
                 if current_line_length > 0 {
                     lines.push(current_line);
                     current_line = Line::from(Vec::new());
@@ -114,7 +113,6 @@ impl Data {
                     );
                 }
             } else {
-
                 if value.len() + current_line_length > 160 {
                     lines.push(current_line);
                     current_line = Line::from(
