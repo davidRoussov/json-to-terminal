@@ -11,9 +11,10 @@ use session::{Session};
 
 pub fn render(json: String) -> Result<Session, Errors> {
     log::trace!("In render");
+    log::trace!("json: {}", json);
 
     let input: Input = serde_json::from_str(&json).map_err(|e| {
-        log::error!("{}", e);
+        log::error!("deserialization error: {}", e);
         Errors::DeserializationError
     })?;
 

@@ -88,7 +88,7 @@ fn main() -> io::Result<()> {
             println!("{:?}", session_result);
         }
         Err(err) => {
-            log::error!("session ended in error: {:?}", err);
+            println!("session ended in error: {:?}", err);
         }
     }
 

@@ -31,8 +31,14 @@ pub fn start_interface(input: &Input) -> Result<Session> {
 }
 
 fn startup() -> Result<()> {
-    enable_raw_mode()?;
-    execute!(std::io::stderr(), EnterAlternateScreen)?;
+    enable_raw_mode().map_err(|e| {
+        log::error!("Failed to enable raw mode: {}", e);
+        e
+    })?;
+    execute!(std::io::stderr(), EnterAlternateScreen).map_err(|e| {
+        log::error!("Failed to enter alternate screen: {}", e);
+        e
+    })?;
     Ok(())
 }
 
@@ -74,31 +80,54 @@ fn run(input: &Input) -> Result<Session> {
 }
 
 fn update(app: &mut App) -> Result<()> {
-    if event::poll(std::time::Duration::from_millis(50))? {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Press {
-                match key.code {
-                    Char('q') => app.quit(),
-                    Char('g') => app.display_items.start(),
-                    Char('G') => app.display_items.end(),
-                    Char('j') => app.display_items.next(),
-                    Char('k') => app.display_items.previous(),
-                    Char('p') => app.toggle_primary_content(),
-                    KeyCode::Enter => {
-                        app.deeper();
-                    },
-                    KeyCode::Backspace => {
-                        app.higher();
-                    },
-                    KeyCode::Tab => {
-                        app.farther();
-                    },
-                    KeyCode::Esc => {
-                        app.closer();
-                    },
-                    _ => {},
+    log::trace!("Polling event");
+
+    match event::poll(std::time::Duration::from_millis(50)) {
+        Ok(true) => {
+            log::trace!("Event polled");
+
+            match event::read() {
+                Ok(event) => {
+                    log::trace!("Event read: {:?}", event);
+
+                    if let Event::Key(key) = event {
+                        if key.kind == event::KeyEventKind::Press {
+                            match key.code {
+                                Char('q') => app.quit(),
+                                Char('g') => app.display_items.start(),
+                                Char('G') => app.display_items.end(),
+                                Char('j') => app.display_items.next(),
+                                Char('k') => app.display_items.previous(),
+                                Char('p') => app.toggle_primary_content(),
+                                KeyCode::Enter => {
+                                    app.deeper();
+                                },
+                                KeyCode::Backspace => {
+                                    app.higher();
+                                },
+                                KeyCode::Tab => {
+                                    app.farther();
+                                },
+                                KeyCode::Esc => {
+                                    app.closer();
+                                },
+                                _ => {},
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to read event: {}", e);
+                    return Err(Box::new(e));
                 }
             }
+        }
+        Ok(false) => {
+            log::trace!("No event found");
+        }
+        Err(e) => {
+            log::error!("Failed to poll event: {}", e);
+            return Err(Box::new(e));
         }
     }
 
