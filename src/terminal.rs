@@ -99,18 +99,10 @@ fn update(app: &mut App) -> Result<()> {
                                 Char('j') => app.display_items.next(),
                                 Char('k') => app.display_items.previous(),
                                 Char('p') => app.toggle_primary_content(),
-                                KeyCode::Enter => {
-                                    app.deeper();
-                                },
-                                KeyCode::Backspace => {
-                                    app.higher();
-                                },
-                                KeyCode::Tab => {
-                                    app.farther();
-                                },
-                                KeyCode::Esc => {
-                                    app.closer();
-                                },
+                                Char('-') => app.higher(),
+                                Char('+') => app.deeper(),
+                                KeyCode::Enter => {},
+                                KeyCode::Backspace => {},
                                 _ => {},
                             }
                         }
