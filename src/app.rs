@@ -94,6 +94,7 @@ impl App {
 
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
+        self.current_depth = input.guess_coherent_depth();
         self.init_display_items();
     }
 }

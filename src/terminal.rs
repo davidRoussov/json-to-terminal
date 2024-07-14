@@ -80,12 +80,8 @@ fn run(input: &Input) -> Result<Session> {
 }
 
 fn update(app: &mut App) -> Result<()> {
-    log::trace!("Polling event");
-
     match event::poll(std::time::Duration::from_millis(50)) {
         Ok(true) => {
-            log::trace!("Event polled");
-
             match event::read() {
                 Ok(event) => {
                     log::trace!("Event read: {:?}", event);

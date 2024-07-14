@@ -39,6 +39,35 @@ pub struct Input {
     pub metadata: Metadata,
 }
 
+impl Input {
+    pub fn guess_coherent_depth(&self) -> usize {
+        let mut primary_content_counts: HashMap<usize, usize> = HashMap::new();
+
+        fn recurse(current_depth: usize, data: &Data, counts: &mut HashMap<usize, usize>) {
+            for value in &data.values {
+                if value.meta.is_main_primary_content {
+                    *counts.entry(current_depth).or_insert(0) += 1;
+                }
+            }
+
+            for child in &data.children {
+                recurse(current_depth + 1, child, counts);
+            }
+        }
+
+        recurse(0, &self.data, &mut primary_content_counts);
+
+        let total_count: usize = primary_content_counts.values().sum();
+
+        let filtered_counts: HashMap<usize, usize> = primary_content_counts.iter()
+            .filter(|&(_, value)| (*value as f64) / (total_count as f64) > 0.1)
+            .map(|(&key, &value)| (key, value))
+            .collect();
+
+        std::cmp::max(filtered_counts.keys().min().cloned().unwrap() - 1, 0) as usize
+    }
+}
+
 impl Data {
     pub fn go_down_depth(&self, depth: usize, results: &mut Vec<Data>) {
         if depth == 0 {
