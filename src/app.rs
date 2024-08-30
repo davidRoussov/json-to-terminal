@@ -10,7 +10,7 @@ use textwrap;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::input::{Input, Data};
+use crate::input::{Input, Content};
 use crate::session::{Session};
 
 const DEFAULT_DEPTH: usize = 1;
@@ -39,7 +39,7 @@ pub struct App {
     input: Option<Input>,
 }
 
-type ComplexObject = Data;
+type ComplexObject = Content;
 
 pub struct StatefulList<T> {
     state: ListState,
@@ -94,7 +94,6 @@ impl App {
 
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
-        self.current_depth = input.guess_coherent_depth();
         self.init_display_items();
     }
 }
@@ -187,7 +186,7 @@ impl App {
     fn render_header(&mut self, area: Rect, buf: &mut Buffer) {
         let text_color: Color = Color::from_str("#111111").unwrap();
 
-        let text = self.input.as_ref().unwrap().metadata.title.clone();
+        let text = "Placeholder title";
 
         let span: Span = Span::styled(
             text,
