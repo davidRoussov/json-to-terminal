@@ -224,7 +224,8 @@ impl App {
                     &main_content_color,
                     &text_color,
                     &background_color,
-                    &mut lines
+                    &mut lines,
+                    0
                 );
 
                 if lines.len() > 0 {

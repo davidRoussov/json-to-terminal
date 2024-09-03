@@ -34,6 +34,8 @@ pub struct Content {
     pub meta: ContentMetadata,
     pub values: Vec<ContentValue>,
     pub inner_content: Vec<Content>,
+    #[serde(default)]
+    pub children: Vec<Content>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -49,6 +51,10 @@ impl Content {
             for child in &self.inner_content {
                 child.go_down_depth(depth - 1, results);
             }
+
+            for child in &self.children {
+                results.push(child.clone());
+            }
         }
     }
 
@@ -58,7 +64,8 @@ impl Content {
         main_content_color: &Color,
         text_color: &Color,
         background_color: &Color,
-        result: &mut Vec<Line>
+        result: &mut Vec<Line>,
+        indent_size: usize,
     ) {
         let values: Vec<ContentValue> = self.values.iter()
             .into_iter()
@@ -74,6 +81,14 @@ impl Content {
 
         let mut lines: Vec<Line> = Vec::new();
         let mut current_line: Line = Line::from(Vec::new());
+
+        if let Some(recursive) = &self.meta.recursive {
+            if recursive.is_root {
+                lines.push(Line::from("".to_string()));
+            }
+        }
+        
+        let indent = " ".repeat(indent_size * 2);
 
         for item in values.iter() {
             let value = item.value.trim();
@@ -98,7 +113,7 @@ impl Content {
                     lines.push(
                         Line::from(
                             Span::styled(
-                                format!("{}", segment),
+                                format!("{}{}", indent, segment),
                                 Style::new()
                                     .fg(fg)
                                     .bg(*background_color)
@@ -111,7 +126,7 @@ impl Content {
                     lines.push(current_line);
                     current_line = Line::from(
                         Span::styled(
-                            format!("{}", value),
+                            format!("{}{}", indent, value),
                             Style::new()
                                 .fg(fg)
                                 .bg(*background_color)
@@ -120,7 +135,7 @@ impl Content {
                 } else {
                     current_line.spans.push(
                         Span::styled(
-                            format!(" {}", value),
+                            format!("{}{}", indent, value),
                             Style::new()
                                 .fg(fg)
                                 .bg(*background_color)
@@ -141,7 +156,12 @@ impl Content {
         result.append(&mut lines);
 
         for child in &self.inner_content {
-            child.to_lines(filter_secondary_content, main_content_color, text_color, background_color, result);
+            child.to_lines(filter_secondary_content, main_content_color, text_color, background_color, result, indent_size + 1);
+        }
+
+        for child in &self.children {
+            result.push(Line::from("".to_string()));
+            child.to_lines(filter_secondary_content, main_content_color, text_color, background_color, result, indent_size + 2);
         }
     }
 
