@@ -4,10 +4,12 @@ use itertools::Itertools;
 use std::cmp::Ordering;
 use ratatui::{prelude::*, widgets::*};
 use textwrap;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ContentValueMetadata {
     pub is_primary_content: bool,
+    pub is_url: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -91,15 +93,31 @@ impl Content {
         let indent = " ".repeat(indent_size * 2);
 
         for item in values.iter() {
-            let value = item.value.trim();
-            let fg = if item.meta.is_primary_content {
+            let mut value = item.value.trim();
+
+            let mut fg = if item.meta.is_primary_content {
                 *main_content_color
             } else {
                 *text_color
             };
+
             let current_line_length: usize = current_line.spans
                 .iter()
                 .map(|span| span.content.len()).sum();
+
+            if item.meta.is_url {
+                fg = Color::from_str("#0000FF").unwrap();
+            }
+
+            let mut style = Style::new().fg(fg).bg(*background_color);
+
+            if item.meta.is_url {
+                style = style.add_modifier(Modifier::UNDERLINED);
+            }
+
+            let indent_span = Span::raw(
+                format!("{}", indent),
+            );
 
             if value.len() > 160 {
                 if current_line_length > 0 {
@@ -111,35 +129,35 @@ impl Content {
 
                 for segment in wrapped {
                     lines.push(
-                        Line::from(
+                        Line::from(vec![
+                            indent_span.clone(),
                             Span::styled(
-                                format!("{}{}", indent, segment),
-                                Style::new()
-                                    .fg(fg)
-                                    .bg(*background_color)
+                                format!("{}", segment),
+                                style,
                             )
-                        )
+                        ])
                     );
                 }
             } else {
                 if value.len() + current_line_length > 160 {
                     lines.push(current_line);
-                    current_line = Line::from(
+                    current_line = Line::from(vec![
+                        indent_span.clone(),
                         Span::styled(
-                            format!("{}{}", indent, value),
-                            Style::new()
-                                .fg(fg)
-                                .bg(*background_color)
+                            format!("{}", value),
+                            style,
                         )
-                    );
+                    ]);
                 } else {
+                    current_line.spans.push(indent_span.clone());
                     current_line.spans.push(
                         Span::styled(
-                            format!("{}{}", indent, value),
-                            Style::new()
-                                .fg(fg)
-                                .bg(*background_color)
+                            format!("{}", value),
+                            style,
                         )
+                    );
+                    current_line.spans.push(
+                        Span::raw(format!("{}", " ".to_string()))
                     );
                 }
             }
