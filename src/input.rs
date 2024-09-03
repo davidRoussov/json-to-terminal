@@ -33,7 +33,7 @@ pub struct Content {
     pub id: String,
     pub meta: ContentMetadata,
     pub values: Vec<ContentValue>,
-    pub children: Vec<Content>,
+    pub inner_content: Vec<Content>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -46,7 +46,7 @@ impl Content {
         if depth == 0 {
             results.push(self.clone());
         } else {
-            for child in &self.children {
+            for child in &self.inner_content {
                 child.go_down_depth(depth - 1, results);
             }
         }
@@ -140,7 +140,7 @@ impl Content {
 
         result.append(&mut lines);
 
-        for child in &self.children {
+        for child in &self.inner_content {
             child.to_lines(filter_secondary_content, main_content_color, text_color, background_color, result);
         }
     }
