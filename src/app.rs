@@ -37,6 +37,7 @@ pub struct App {
     pub color_palette: ColorPalette,
     current_depth: usize,
     input: Option<Input>,
+    current_value_index: usize,
 }
 
 type ComplexObject = Content;
@@ -63,6 +64,7 @@ impl App {
                 background_hex: DEFAULT_BACKGROUND_COLOR_HEX.to_string(),
             },
             input: None,
+            current_value_index: 0,
         }
     }
 
@@ -95,6 +97,20 @@ impl App {
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
         self.init_display_items();
+    }
+
+    pub fn first_value(&mut self) {
+        self.current_value_index = 0;
+    }
+
+    pub fn next_value(&mut self) {
+        self.current_value_index += 1;
+    }
+
+    pub fn previous_value(&mut self) {
+        if self.current_value_index > 0 {
+            self.current_value_index -= 1;
+        }
     }
 }
 
@@ -216,7 +232,8 @@ impl App {
         let items: Vec<RListItem> = self.display_items.items
             .clone()
             .iter()
-            .map(|item| {
+            .enumerate()
+            .map(|(index, item)| {
                 let mut lines: Vec<Line> = Vec::new();
 
                 item.to_lines(
@@ -225,8 +242,26 @@ impl App {
                     &text_color,
                     &background_color,
                     &mut lines,
-                    0
+                    0,
                 );
+
+                if let Some(selected_item_index) = self.display_items.state.selected() {
+                    if selected_item_index == index {
+                        let mut current_index = 0;
+                        for line in lines.iter_mut() {
+                            for span in line.spans.iter_mut() {
+                                if !span.content.trim().is_empty() {
+                                    if self.current_value_index == current_index {
+                                        log::debug!("span: {:?}", span);
+                                        let color = Color::from_str("#00FF00").unwrap();
+                                        span.style = span.style.bg(color);
+                                    }
+                                    current_index += 1;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if lines.len() > 0 {
                     lines.push(

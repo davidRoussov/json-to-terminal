@@ -97,8 +97,8 @@ fn update(app: &mut App) -> Result<()> {
                                 Char('p') => app.toggle_primary_content(),
                                 Char('-') => app.higher(),
                                 Char('+') => app.deeper(),
-                                KeyCode::Enter => {},
-                                KeyCode::Backspace => {},
+                                KeyCode::Enter => app.next_value(),
+                                KeyCode::Backspace => app.previous_value(),
                                 _ => {},
                             }
                         }

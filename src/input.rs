@@ -92,7 +92,7 @@ impl Content {
         
         let indent = " ".repeat(indent_size * 2);
 
-        for item in values.iter() {
+        for (index, item) in values.iter().enumerate() {
             let mut value = item.value.trim();
 
             let mut fg = if item.meta.is_primary_content {
@@ -109,7 +109,9 @@ impl Content {
                 fg = Color::from_str("#0000FF").unwrap();
             }
 
-            let mut style = Style::new().fg(fg).bg(*background_color);
+            let mut bg = *background_color;
+
+            let mut style = Style::new().fg(fg).bg(bg);
 
             if item.meta.is_url {
                 style = style.add_modifier(Modifier::UNDERLINED);
@@ -174,13 +176,26 @@ impl Content {
         result.append(&mut lines);
 
         for child in &self.inner_content {
-            child.to_lines(filter_secondary_content, main_content_color, text_color, background_color, result, indent_size + 1);
+            child.to_lines(
+                filter_secondary_content,
+                main_content_color,
+                text_color,
+                background_color,
+                result, 
+                indent_size + 1,
+            );
         }
 
         for child in &self.children {
             result.push(Line::from("".to_string()));
-            child.to_lines(filter_secondary_content, main_content_color, text_color, background_color, result, indent_size + 2);
+            child.to_lines(
+                filter_secondary_content,
+                main_content_color,
+                text_color,
+                background_color,
+                result,
+                indent_size + 2,
+            );
         }
     }
-
 }
