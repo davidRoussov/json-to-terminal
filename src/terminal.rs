@@ -94,11 +94,13 @@ fn update(app: &mut App) -> Result<()> {
                                 Char('G') => app.display_items.end(),
                                 Char('j') => app.display_items.next(),
                                 Char('k') => app.display_items.previous(),
+                                Char('h') => app.previous_value(),
+                                Char('l') => app.next_value(),
                                 Char('p') => app.toggle_primary_content(),
                                 Char('-') => app.higher(),
                                 Char('+') => app.deeper(),
-                                KeyCode::Enter => app.next_value(),
-                                KeyCode::Backspace => app.previous_value(),
+                                KeyCode::Enter => app.exit_with_value(),
+                                KeyCode::Backspace => {},
                                 _ => {},
                             }
                         }

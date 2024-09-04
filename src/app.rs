@@ -38,6 +38,7 @@ pub struct App {
     current_depth: usize,
     input: Option<Input>,
     current_value_index: usize,
+    current_value: Option<String>,
 }
 
 type ComplexObject = Content;
@@ -56,6 +57,7 @@ impl App {
             display_items: StatefulList::<ComplexObject>::with_items(Vec::new()),
             session: Session {
                 depth: DEFAULT_DEPTH,
+                value: None,
             },
             current_depth: DEFAULT_DEPTH,
             color_palette: ColorPalette {
@@ -65,6 +67,7 @@ impl App {
             },
             input: None,
             current_value_index: 0,
+            current_value: None,
         }
     }
 
@@ -91,6 +94,7 @@ impl App {
     pub fn get_session(&self) -> Session {
         Session {
             depth: self.current_depth,
+            value: self.current_value.clone(),
         }
     }
 
@@ -111,6 +115,11 @@ impl App {
         if self.current_value_index > 0 {
             self.current_value_index -= 1;
         }
+    }
+
+    pub fn exit_with_value(&mut self) {
+        self.session.value = self.current_value.clone();
+        self.quit();
     }
 }
 
@@ -252,7 +261,7 @@ impl App {
                             for span in line.spans.iter_mut() {
                                 if !span.content.trim().is_empty() {
                                     if self.current_value_index == current_index {
-                                        log::debug!("span: {:?}", span);
+                                        self.current_value = Some(span.content.clone().to_string());
                                         let color = Color::from_str("#00FF00").unwrap();
                                         span.style = span.style.bg(color);
                                     }
