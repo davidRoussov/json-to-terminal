@@ -117,6 +117,11 @@ impl App {
         }
     }
 
+    pub fn exit_without_value(&mut self) {
+        self.session.value = None;
+        self.quit();
+    }
+
     pub fn exit_with_value(&mut self) {
         self.session.value = self.current_value.clone();
         self.quit();
@@ -278,7 +283,7 @@ impl App {
                     );
                 }
 
-                lines.truncate(40);
+                lines.truncate(30);
 
                 lines
             })

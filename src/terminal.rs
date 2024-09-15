@@ -89,7 +89,7 @@ fn update(app: &mut App) -> Result<()> {
                     if let Event::Key(key) = event {
                         if key.kind == event::KeyEventKind::Press {
                             match key.code {
-                                Char('q') => app.quit(),
+                                Char('q') => app.exit_without_value(),
                                 Char('g') => app.display_items.start(),
                                 Char('G') => app.display_items.end(),
                                 Char('j') => app.display_items.next(),
