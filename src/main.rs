@@ -81,7 +81,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let result = tooey::render(json_string);
+    let result = tooey::render(json_string, None);
 
     match result {
         Ok(session_result) => {

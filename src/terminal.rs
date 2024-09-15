@@ -14,16 +14,17 @@ use std::collections::HashMap;
 use crate::input::*;
 use crate::session::*;
 use crate::app::{App};
+use crate::history::{History};
 
 type Err = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Err>;
 
-pub fn start_interface(input: &Input) -> Result<Session> {
+pub fn start_interface(input: &Input, history: &Option<History>) -> Result<Session> {
     log::trace!("In start_interface");
 
     startup()?;
 
-    let result = run(input);
+    let result = run(input, history);
 
     shutdown()?;
 
@@ -49,11 +50,12 @@ fn shutdown() -> Result<()> {
     Ok(())
 }
 
-fn run(input: &Input) -> Result<Session> {
+fn run(input: &Input, history: &Option<History>) -> Result<Session> {
     let mut t = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
 
     let mut app = App::new();
     app.load_input(input);
+    app.load_history(history);
 
     let background_hex = app.color_palette.background_hex.clone();
     let color: Color = parse_hex_color(&background_hex).expect("Could not parse hex colour code");
@@ -100,7 +102,7 @@ fn update(app: &mut App) -> Result<()> {
                                 Char('-') => app.higher(),
                                 Char('+') => app.deeper(),
                                 KeyCode::Enter => app.exit_with_value(),
-                                KeyCode::Backspace => {},
+                                KeyCode::Backspace => app.try_navigate_back(),
                                 _ => {},
                             }
                         }

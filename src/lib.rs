@@ -4,12 +4,15 @@ mod input;
 mod session;
 mod app;
 
+pub mod history;
+
 use error::{Errors};
 use terminal::{start_interface};
 use input::{Input};
 use session::{Session};
+use history::{History};
 
-pub fn render(json: String) -> Result<Session, Errors> {
+pub fn render(json: String, history: Option<History>) -> Result<Session, Errors> {
     log::trace!("In render");
     log::trace!("json: {}", json);
 
@@ -20,7 +23,7 @@ pub fn render(json: String) -> Result<Session, Errors> {
 
     log::info!("Successfully deserialized JSON");
 
-    start_interface(&input).map_err(|e| {
+    start_interface(&input, &history).map_err(|e| {
         log::error!("{}", e);
         Errors::UnexpectedError
     })

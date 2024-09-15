@@ -12,6 +12,7 @@ use std::str::FromStr;
 
 use crate::input::{Input, Content};
 use crate::session::{Session};
+use crate::history::{History};
 
 const DEFAULT_DEPTH: usize = 1;
 
@@ -37,6 +38,7 @@ pub struct App {
     pub color_palette: ColorPalette,
     current_depth: usize,
     input: Option<Input>,
+    history: Option<History>,
     current_value_index: usize,
     current_value: Option<String>,
 }
@@ -66,6 +68,7 @@ impl App {
                 background_hex: DEFAULT_BACKGROUND_COLOR_HEX.to_string(),
             },
             input: None,
+            history: None,
             current_value_index: 0,
             current_value: None,
         }
@@ -92,15 +95,16 @@ impl App {
     }
     
     pub fn get_session(&self) -> Session {
-        Session {
-            depth: self.current_depth,
-            value: self.current_value.clone(),
-        }
+        self.session.clone()
     }
 
     pub fn load_input(&mut self, input: &Input) {
         self.input = Some(input.clone());
         self.init_display_items();
+    }
+
+    pub fn load_history(&mut self, history: &Option<History>) {
+        self.history = history.clone();
     }
 
     pub fn first_value(&mut self) {
@@ -125,6 +129,15 @@ impl App {
     pub fn exit_with_value(&mut self) {
         self.session.value = self.current_value.clone();
         self.quit();
+    }
+
+    pub fn try_navigate_back(&mut self) {
+        if let Some(history) = &self.history {
+            if let Some(history_entry) = history.first() {
+                self.session.value = Some(history_entry.url.clone());
+                self.quit();
+            }
+        }
     }
 }
 
