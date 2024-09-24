@@ -193,7 +193,7 @@ impl App {
         self.input
             .clone()
             .unwrap()
-            .data
+            .content
             .go_down_depth(
                 self.current_depth,
                 &mut results

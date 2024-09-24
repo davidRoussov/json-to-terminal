@@ -8,6 +8,7 @@ use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ContentValueMetadata {
+    pub is_title: bool,
     pub is_primary_content: bool,
     pub is_url: bool,
 }
@@ -42,7 +43,8 @@ pub struct Content {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Input {
-    pub data: Content,
+    pub content: Content,
+    pub related_content: Content,
 }
 
 impl Content {
@@ -115,6 +117,10 @@ impl Content {
 
             if item.meta.is_url {
                 style = style.add_modifier(Modifier::UNDERLINED);
+            }
+
+            if  item.meta.is_title {
+                style = style.add_modifier(Modifier::BOLD);
             }
 
             let indent_span = Span::raw(
