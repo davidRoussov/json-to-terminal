@@ -39,6 +39,8 @@ pub struct Content {
     pub inner_content: Vec<Content>,
     #[serde(default)]
     pub children: Vec<Content>,
+    #[serde(default)]
+    pub lists: Vec<Vec<Content>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -202,6 +204,21 @@ impl Content {
                 result,
                 indent_size + 2,
             );
+        }
+
+        for list in &self.lists {
+            result.push(Line::from("---".to_string()));
+            for item in list {
+                result.push(Line::from("-".to_string()));
+                item.to_lines(
+                    filter_secondary_content,
+                    main_content_color,
+                    text_color,
+                    background_color,
+                    result, 
+                    indent_size + 1,
+                );
+            }
         }
     }
 }
