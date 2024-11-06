@@ -27,15 +27,11 @@ pub struct ContentMetadataRecursive {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ContentMetadata {
-    pub recursive: Option<ContentMetadataRecursive>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Content {
     pub id: String,
-    pub meta: ContentMetadata,
+    #[serde(default)]
     pub values: Vec<ContentValue>,
+    #[serde(default)]
     pub inner_content: Vec<Content>,
     #[serde(default)]
     pub children: Vec<Content>,
@@ -60,6 +56,12 @@ impl Content {
 
             for child in &self.children {
                 results.push(child.clone());
+            }
+
+            for list in &self.lists {
+                for item in list {
+                    results.push(item.clone());
+                }
             }
         }
     }
@@ -88,12 +90,6 @@ impl Content {
         let mut lines: Vec<Line> = Vec::new();
         let mut current_line: Line = Line::from(Vec::new());
 
-        if let Some(recursive) = &self.meta.recursive {
-            if recursive.is_root {
-                lines.push(Line::from("".to_string()));
-            }
-        }
-        
         let indent = " ".repeat(indent_size * 2);
 
         for (index, item) in values.iter().enumerate() {
